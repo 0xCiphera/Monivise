@@ -1,46 +1,159 @@
-# Monivise
+<div align="center">
 
-> Personal Financial Decision Engine — Spend Smarter, Not Just Less
+```
+███╗   ███╗ ██████╗ ███╗   ██╗██╗██╗   ██╗██╗███████╗███████╗
+████╗ ████║██╔═══██╗████╗  ██║██║██║   ██║██║██╔════╝██╔════╝
+██╔████╔██║██║   ██║██╔██╗ ██║██║██║   ██║██║███████╗█████╗
+██║╚██╔╝██║██║   ██║██║╚██╗██║██║╚██╗ ██╔╝██║╚════██║██╔══╝
+██║ ╚═╝ ██║╚██████╔╝██║ ╚████║██║ ╚████╔╝ ██║███████║███████╗
+╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝  ╚═╝╚══════╝╚══════╝
+```
 
-Monivise is a real-time personal financial decision engine that answers one critical question before you spend: **"Can I afford this right now — and what happens if I do?"** Unlike traditional expense trackers, Monivise simulates every purchase against your actual financial capacity, accounting for fixed obligations, savings goals, and spending pace.
+**Personal Financial Decision Engine**
 
-**Stack:** ASP.NET Core 9 Web API · C# 12 · Entity Framework Core · PostgreSQL · JWT Authentication · Next.js 15 · React 19 · TypeScript · Zustand · Tailwind CSS
+_Spend with Confidence. Not Just Less._
 
-**Core Concept:** Zero-based envelope budgeting with real-time risk assessment. Every spending decision is simulated before confirmation.
+[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=flat-square&logo=postgresql)](https://postgresql.org)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 
-## System Philosophy
+</div>
+
+---
+
+## What Is Monivise?
+
+**Monivise is not a budgeting app.**
+
+It is a real-time personal financial decision engine built around a single question that traditional finance apps refuse to answer:
+
+> **"Can I afford this right now — and what happens if I do?"**
+
+Most budgeting apps track what already happened. Monivise simulates what _will_ happen — before you spend. Every purchase decision runs through a consequence engine that computes risk, shows post-spend projections, and tells you in real time whether a transaction is Safe, Cautious, Risky, or Critical given your actual financial position at that moment.
+
+The number that matters is not your bank balance. It is not your monthly income. It is your **Safe to Spend** — the real discretionary amount available after fixed obligations are reserved and savings are protected.
+
+---
+
+## Tech Stack
+
+| Layer             | Technology                                       |
+| ----------------- | ------------------------------------------------ | --- | ---- | ----------------- |
+| Backend API       | ASP.NET Core 9 Web API · C# 12                   |
+| ORM & Persistence | Entity Framework Core · PostgreSQL 16            |
+| Authentication    | JWT Bearer Tokens · BCrypt                       |
+| Frontend          | Blazor WebAssembly (.NET 9) · MudBlazor · Fluxor |
+| State Management  | Fluxor (Redux pattern for Blazor)                |
+| Styling           | CSS Custom Properties · MudBlazor Theme System   |
+| Testing           | xUnit · FluentAssertions · Moq · bUnit           |     | Docs | Swagger / OpenAPI |
+
+---
+
+## Core Concepts
 
 ### The Three Financial Layers
 
-Understanding this hierarchy is critical to all downstream logic:
+```
+┌─────────────────────────────────────────────┐
+│  Layer 1 — Total Balance                    │
+│  Fixed + Flexible + Savings (informational) │
+├─────────────────────────────────────────────┤
+│  Layer 2 — Allocated Buckets                │
+│  Per-category remaining amounts             │
+├─────────────────────────────────────────────┤
+│  Layer 3 — Safe to Spend ← THE NUMBER      │
+│  Flexible remaining MINUS fixed obligations │
+│  Savings excluded entirely                  │
+└─────────────────────────────────────────────┘
+```
 
-| Layer | Definition | Includes |
-|-------|-----------|----------|
-| **Total Balance** | Sum of all money across every bucket | Fixed + Flexible + Savings |
-| **Allocated Buckets** | Each income allocation by category | Per-bucket remaining amounts |
-| **Spendable Money** | ONLY flexible bucket totals minus future obligations | Food + Transport + Fun + user-defined flexible |
+Only Layer 3 drives spending decisions. Layers 1 and 2 are informational.
 
-> **Safe to Spend is derived entirely from Layer 3.** Layers 1 and 2 are informational. Only Layer 3 drives spending decisions.
+### Bucket Types
 
-### Core Principles
-
-1. **All financial calculations are server-side.** Never in React components, never in API controllers. `FinancialCalculationService` is the single source of truth.
-2. **Every displayed number is derived, not stored.** Components consume selectors; selectors consume the global store; the store reflects server state.
-3. **No hardcoded financial rules.** All allocation percentages, bucket definitions, and risk thresholds are user-defined and database-persisted.
-4. **Cycle-aware system.** A budget cycle has start date, end date, income, and carry-over rules. Daily and weekly views are always relative to the active cycle.
-5. **Fixed obligations are reserved immediately.** Rent, bills, and other fixed expenses are treated as already spent from the moment income arrives — they never appear in Safe to Spend.
+| Type         | Behaviour                                | Safe to Spend Impact                                                      |
+| ------------ | ---------------------------------------- | ------------------------------------------------------------------------- |
+| **Fixed**    | Non-negotiable obligations (rent, bills) | Balance is **deducted** from Safe to Spend — treated as already owed      |
+| **Flexible** | Everyday discretionary spending          | Balance **contributes** to Safe to Spend                                  |
+| **Savings**  | Protected growth                         | **Completely excluded** — never visible to Safe to Spend in any direction |
 
 ### The Decision Engine
 
-When a user considers spending money, the engine runs a simulation and returns a structured risk assessment **before any money is deducted**:
+When a user considers a spend, the engine runs a full simulation before any money moves:
 
-1. User enters amount + selects bucket
-2. Frontend calls `POST /api/decisions/simulate`
-3. Engine computes impact on bucket, SafeToSpend, and DailyLimit
-4. Evaluates risk level (Safe → Caution → Risky → Critical)
-5. Checks Future Regret Signals (predictive warnings)
-6. Full `SpendImpact` DTO returned to frontend in real time
-7. User sees visual warning before confirming
+```
+User enters amount
+      ↓
+POST /api/decisions/simulate
+      ↓
+Engine computes: bucket impact · SafeToSpend delta · DailyLimit after · depletion %
+      ↓
+Risk evaluated: Safe → Caution → Risky → Critical
+      ↓
+Future Regret Signals checked (predictive warnings)
+      ↓
+Full SpendImpact DTO returned in real time
+      ↓
+User sees consequence — then decides
+```
+
+---
+
+## Architecture Overview
+
+```
+Monivise/
+├── src/
+│   ├── Monivise.Domain/            # Pure C# — zero external dependencies
+│   │   ├── Entities/               # User, BudgetCycle, Bucket, Transaction, AuditLog
+│   │   ├── Enums/                  # BucketType, CycleStatus, RiskLevel
+│   │   └── Exceptions/             # DomainException hierarchy
+│   │
+│   ├── Monivise.Application/       # Use cases, interfaces, DTOs, services
+│   │   ├── Interfaces/             # IFinancialCalculationService (and all others)
+│   │   ├── Services/               # FinancialCalculationService ← THE HEART
+│   │   └── DTOs/                   # All request/response contracts
+│   │
+│   ├── Monivise.Infrastructure/    # EF Core, PostgreSQL, JWT, repositories
+│   │   └── Data/                   # AppDbContext, configurations, migrations
+│   │
+│   └── Monivise.API/               # ASP.NET Core Web API — thin controllers only
+│       ├── Controllers/
+│       └── Middleware/             # ExceptionMiddleware (DomainException → 422)
+│
+├── tests/
+│   └── Monivise.UnitTests/         # Financial logic tests — xUnit
+│
+└── Monivise.App/                   # Blazor WebAssembly frontend
+    ├── wwwroot/                    # index.html, CSS custom properties, fonts
+    ├── Pages/                      # Routable pages (@page directive)
+    ├── Components/                 # Reusable Blazor components
+    │   ├── Atoms/                  # GlowButton, Chip, ProgressBar, NumPad
+    │   ├── Cards/                  # BucketCard, TransactionCard
+    │   ├── Dashboard/              # SafeToSpendBanner, PaceIndicator
+    │   ├── Simulator/              # ConsequencePanel, RiskBadge
+    │   ├── Charts/                 # WeeklyBarChart, BucketDonut
+    │   └── Navigation/             # BottomNav
+    ├── Layouts/                    # AppShell, MainLayout, AuthLayout
+    ├── Services/                   # Typed HTTP client wrappers, business services
+    ├── API/                        # ApiClient base, typed API clients
+    ├── Authentication/             # JwtAuthStateProvider, TokenStore, RefreshTokenHandler
+    ├── State/                      # Fluxor — AppState, Actions, Reducers, Effects
+    ├── DTOs/                       # Data Transfer Objects (mirror API contracts)
+    ├── Themes/                     # MoniTheme.cs, ThemeTokens.cs
+    └── Utilities/                  # CurrencyFormatter, DateHelpers, ValidationHelpers
+```
+
+**Dependency direction is strict and one-way:**
+
+```
+Domain ← Application ← Infrastructure ← API
+  ↑____________________________________________|
+                     Tests
+```
+
+Domain never references Application, Infrastructure, or API. If you are adding an EF or ASP.NET `using` inside Domain — stop. That belongs in another layer.
 
 ---
 
@@ -49,201 +162,249 @@ When a user considers spending money, the engine runs a simulation and returns a
 ### Prerequisites
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9)
-- [Node.js 20+](https://nodejs.org)
-- [PostgreSQL 16](https://postgresql.org) (or use Railway in cloud)
-- [VS Code](https://code.visualstudio.com/) + C# Dev Kit + Prettier + ESLint
-- Git
-- Postman (for API testing before frontend connection)
+- [PostgreSQL 16](https://postgresql.org)
+- [Git](https://git-scm.com)
+- Postman (API verification before frontend connection)
 
 ### Backend Setup
 
 ```bash
-# Clone and build
-git clone https://github.com/your-org/monivise.git
+# 1. Clone
+git clone https://github.com/0xCiphera/monivise.git
 cd monivise
-dotnet restore
-dotnet build
 
-# Create database
-psql -U postgres -c "CREATE DATABASE monivise;"
+# 2. Restore and build
+dotnet restore && dotnet build
 
-# Configure secrets
-cp Monivise.API/appsettings.Development.json.example Monivise.API/appsettings.Development.json
-# Edit: set your PostgreSQL password and generate a 64-char JWT secret
-# node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# 3. Create the database
+psql -U postgres -c "CREATE DATABASE monivise_dev;"
 
-# Run migrations
-cd Monivise.API
-dotnet ef migrations add InitialCreate --project ../Monivise.Infrastructure
-dotnet ef database update --project ../Monivise.Infrastructure
+# 4. Configure secrets (never commit this file)
+cp src/Monivise.API/appsettings.Development.example.json \
+   src/Monivise.API/appsettings.Development.json
+# Edit: set PostgreSQL password + generate a JWT secret:
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
-# Start API
-dotnet run
-# API available at http://localhost:5000
-# Swagger UI at http://localhost:5000/swagger
+# 5. Run migrations
+dotnet ef migrations add InitialCreate \
+  --project src/Monivise.Infrastructure \
+  --startup-project src/Monivise.API
+
+dotnet ef database update \
+  --project src/Monivise.Infrastructure \
+  --startup-project src/Monivise.API
+
+# 6. Start API
+dotnet run --project src/Monivise.API
+# API:     http://localhost:5000
+# Swagger: http://localhost:5000/swagger
 ```
 
 ### Frontend Setup
 
 ```bash
-cd monivise-web
-npm install
+# 1. Navigate to Blazor project
+cd src/Monivise.App
 
-# Configure API URL
-echo "NEXT_PUBLIC_API_URL=http://localhost:5000" > .env.local
+# 2. Restore packages
+dotnet restore
 
-# Start dev server
-npm run dev
-# Frontend available at http://localhost:3000
+# 3. Configure API base URL
+echo '{"ApiBaseUrl":"http://localhost:5000"}' > wwwroot/appsettings.Development.json
+
+# 4. Run the Blazor WASM app
+dotnet run
+# Frontend: http://localhost:5259 (or as shown in console)
+
 ```
+
+### Verify Backend (Postman Sequence)
+
+Run these 9 requests in order. Every one must succeed before starting frontend work.
+
+| #   | Request                          | Body                                                                                               | Expected                               |
+| --- | -------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| 1   | `POST /api/auth/register`        | `{ "email": "me@test.com", "password": "Test123!", "displayName": "Tobiloba", "currency": "NGN" }` | 201 + JWT                              |
+| 2   | `POST /api/auth/login`           | `{ "email": "me@test.com", "password": "Test123!" }`                                               | 200 + JWT                              |
+| 3   | `POST /api/buckets`              | `{ "name": "Food", "icon": "🍱", "allocationPercent": 25, "type": "Flexible" }`                    | 201                                    |
+| 4   | `POST /api/buckets` ×4           | Rent(35,Fixed) · Transport(15,Flexible) · Savings(15,Savings) · Fun(10,Flexible)                   | All 201, sum=100                       |
+| 5   | `POST /api/transactions/income`  | `{ "amount": 200000, "source": "Salary" }`                                                         | 201 + allocation breakdown             |
+| 6   | `GET /api/dashboard`             | Bearer token                                                                                       | 200 + safeToSpend, dailyLimit, buckets |
+| 7   | `POST /api/decision/simulate`    | `{ "bucketId": "<food-id>", "amount": 5000 }`                                                      | 200 + SpendImpact + riskLevel          |
+| 8   | `POST /api/transactions/expense` | `{ "bucketId": "<food-id>", "amount": 5000, "note": "Groceries" }`                                 | 201                                    |
+| 9   | `GET /api/dashboard`             | Bearer token                                                                                       | safeToSpend shows ₦5,000 less          |
+
+---
+
+## First-Run Walkthrough
+
+Follow this sequence on a fresh database to verify the full system works end-to-end.
+
+| Step | Action                                    | What to Verify                                                       |
+| ---- | ----------------------------------------- | -------------------------------------------------------------------- |
+| 1    | Register via `/api/auth/register`         | JWT returned, user created                                           |
+| 2    | Login — dashboard shows empty state       | Buckets list empty                                                   |
+| 3    | Create 6 buckets summing to exactly 100%  | System accepts the set                                               |
+| 4    | Add ₦200,000 income                       | Preview matches actual allocation                                    |
+| 5    | Check Safe to Spend                       | Must equal: Flexible remaining MINUS unpaid Fixed. Savings excluded. |
+| 6    | Simulate a spend exceeding bucket balance | Risk shows Critical                                                  |
+| 7    | Confirm a normal spend                    | Dashboard refreshes, SafeToSpend decreases by exact amount           |
+| 8    | Check weekly view                         | Bars only for today and past — never future days                     |
+| 9    | Check history                             | All transactions newest first with correct icons and amounts         |
+
+---
+
+## Financial Engine Rules
+
+These rules are the core of the product. Any code that violates them is a critical bug.
+
+### Rule 1 — Safe to Spend Formula (Immutable)
+
+```
+SafeToSpend = SUM(Flexible bucket remaining) − SUM(unpaid Fixed obligations)
+```
+
+- Savings buckets are **EXCLUDED ENTIRELY**
+- Fixed obligations already paid do NOT reduce SafeToSpend
+- Result is **clamped to 0** — never show a negative number to the user
+- This formula lives in `FinancialCalculationService` and **nowhere else**
+
+### Rule 2 — Daily Spend Limit
+
+```
+DailyLimit = (SafeToSpend / DaysRemaining) × PaceAdjustment
+
+PaceAdjustment:
+  pace ≤ 0.8  →  × 1.15  (ahead of schedule — be generous)
+  pace ≤ 1.0  →  × 1.00  (on track)
+  pace ≤ 1.2  →  × 0.85  (slightly over — tighten)
+  pace >  1.2  →  × 0.70  (significantly over — restrict)
+```
+
+- `DaysRemaining` uses `Math.Max(1, ...)` — never divide by zero
+- Display `--` in UI when `dailyLimit === 0` (no income recorded yet)
+
+### Rule 3 — Risk Level (Evaluated in Priority Order)
+
+```
+Critical  →  PostSafe < 0  OR  Depletion > 100%
+Risky     →  PostDaily < AvgDaily × 0.5  OR  Depletion > 85%
+Caution   →  PostDaily < AvgDaily × 0.8  OR  Depletion > 70%
+Safe      →  otherwise
+```
+
+Critical is always checked first and overrides all other levels.
+
+### Rule 4 — Income Allocation
+
+```
+// Highest percentage first. Last bucket absorbs rounding remainder.
+for each bucket (ordered by AllocationPercent DESC):
+  if last:  amount = income − totalSoFar
+  else:     amount = Round(income × (percent / 100), 2)
+  totalSoFar += amount
+```
+
+### Rule 5 — Weekly View Integrity
+
+- Future days show **no bar** — only the daily budget reference line
+- **Never fabricate spending data** for dates that have not occurred
+- Past and today display actuals only
+
+---
+
+## Architecture Rules
+
+These are enforced at code review. A PR that violates any of them will not be merged.
+
+| Rule                                                        | Description                                                                                          |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **No financial math outside `FinancialCalculationService`** | Controllers, components, and DTOs never calculate SafeToSpend, DailyLimit, or RiskLevel              |
+| **Domain has zero framework dependencies**                  | `Monivise.Domain.csproj` references only base .NET packages — no EF, no ASP.NET                      |
+| **No EF queries in controllers**                            | Controllers call services. Services query the database.                                              |
+| **No business logic in Blazor components**                  | Components read from Fluxor stores and render. All derivation happens in services or state reducers. |
+| **JWT access token in-memory only**                         | TokenStore singleton holds the token. Never persist to localStorage or sessionStorage.               |
+| **Components call services, not API clients**               | Services orchestrate between API clients and Fluxor state. Keeps components clean.                   |
+| **All secrets via configuration**                           | No API keys, passwords, or connection strings in source code                                         |
+| **Use enums, never magic strings**                          | `BucketType.Fixed` not `"Fixed"` in business logic                                                   |
+| **Every POST has validation**                               | Backend: `[ValidateAntiForgeryToken]` + DTO annotations. Frontend: validate before calling API.      |
+| **Currency formatting is centralised**                      | Use `formatCurrency(amount, currency)` — never inline `₦` concatenation                              |
+| **Soft delete only**                                        | Buckets and transactions are never hard-deleted. `IsActive = false` preserves history.               |
+
+---
 
 ## Branch Strategy
 
-We use **trunk-based development** with short-lived feature branches.
+Trunk-based development with short-lived feature branches off `develop`.
 
 ```
 main
- └── develop          ← integration branch, always deployable
-      ├── feature/issue-12-hero-card-component
-      ├── feature/issue-18-decision-engine-risk-algorithm
-      └── fix/issue-31-safe-to-spend-negative-edge-case
+ └── develop                          ← integration branch, always deployable
+      ├── feature/issue-12-hero-card
+      ├── feature/issue-18-decision-engine-risk
+      ├── fix/issue-31-safe-to-spend-negative
+      └── chore/issue-05-setup-eslint
 ```
 
-| Branch | Purpose | Who merges to it |
-|--------|---------|-----------------|
-| `main` | Production. Tagged releases only. | Merge from `develop` via PR after full review |
-| `develop` | Integration. Must always build and pass tests. | Merge from feature branches via PR |
-| `feature/*` | New work. One branch per issue. | Delete after PR is merged |
-| `fix/*` | Bug fixes. | Delete after PR is merged |
-| `chore/*` | Config, tooling, docs — no logic changes. | Delete after PR is merged |
+| Branch      | Purpose                                        | Merge target                 |
+| ----------- | ---------------------------------------------- | ---------------------------- |
+| `main`      | Production — tagged releases only              | From `develop` via PR        |
+| `develop`   | Integration — must always build and pass tests | From feature branches via PR |
+| `feature/*` | New features — one branch per issue            | `develop`                    |
+| `fix/*`     | Bug fixes                                      | `develop`                    |
+| `chore/*`   | Config, tooling, docs, migrations              | `develop`                    |
+
+**Naming convention:** `<type>/issue-<number>-<short-description>`
+
+```bash
+feature/issue-12-hero-card-component
+fix/issue-31-safe-to-spend-negative-edge-case
+chore/issue-05-configure-eslint-and-prettier
+```
 
 **Rules:**
+
 - Never commit directly to `main` or `develop`
-- Branch names must include the issue number
-- Branches must be deleted after merging — keep the repo clean
-- Frontend and backend can share a branch only if the issue requires both
+- Branch name must contain the issue number
+- Delete branches after merging — keep the repository clean
+- WIP limit: maximum 2 branches active per person at a time
 
 ---
 
-## Working on an Issue — Step by Step
+## Commit Convention
 
-### 1. Claim the issue
+Monivise follows [Conventional Commits](https://www.conventionalcommits.org/).
 
-Assign it to yourself. Move the card from **Backlog** to **Up Next**.
-
-```bash
-gh issue edit <issue-number> --add-assignee @me
-```
-
-### 2. Sync your local develop branch
-
-```bash
-git checkout develop && git pull origin develop
-```
-
-### 3. Create your feature branch
-
-```bash
-git checkout -b feature/issue-<number>-<short-description>
-# Example: git checkout -b feature/issue-12-hero-card-component
-```
-
-### 4. Move the card to In Progress
-
-Let your teammate know if it touches shared files like `Program.cs` or `tailwind.config.ts`.
-
-### 5. Do the work
-
-Follow the task checklist in the issue body. Key rules:
-
-- **No financial math in controllers or components.** All calculations go through `FinancialCalculationService`.
-- **No raw EF queries in controllers.** All DB access goes through service classes.
-- **No business logic in views or React components.** Views render ViewModels; components read from stores.
-- **One concern per commit.** Don't bundle a feature and a refactor.
-- **Build before committing.** Run `dotnet build` and `npm run build` before staging.
-
-### 6. Run tests before committing
-
-```bash
-# Backend
-dotnet test Monivise.Tests
-
-# Frontend
-cd monivise-web && npm run build && npm run lint
-```
-
-### 7. Stage and commit
-
-See [Commit Message Convention](#commit-message-convention) below.
-
-```bash
-git add .
-git commit -m "feat(dashboard): implement HeroCard with live SafeToSpend display
-
-Resolves #12
-
-- Added HeroCard component with gradient background and pace badge
-- Integrated useDashboardStore for real-time data
-- Added ProgressBar and StatCell sub-components
-- Verified SafeToSpend calculation matches FinancialCalculationService output"
-```
-
-### 8. Push and open a pull request
-
-```bash
-git push origin feature/issue-12-hero-card-component
-```
-
-### 9. Respond to review
-
-Address every comment. Do not dismiss without fixing or explaining. Re-request review when done.
-
-### 10. After merge — clean up
-
-```bash
-git checkout develop && git pull origin develop
-git branch -d feature/issue-12-hero-card-component
-git push origin --delete feature/issue-12-hero-card-component
-```
-
-Move the issue card to **Done**. GitHub closes the issue automatically if you used `Resolves #<number>`.
-
----
-
-## Commit Message Convention
-
-We follow **Conventional Commits**. Every commit must follow this structure:
+### Format
 
 ```
-<type>(<scope>): <short summary>
+<type>(<scope>): <summary>
 
-<optional body>
+<body — optional>
 
-<optional footer>
+<footer — optional>
 ```
 
 ### Types
 
-| Type | When to use |
-|------|-------------|
-| `feat` | A new feature or user-facing capability |
-| `fix` | A bug fix |
-| `refactor` | Code restructure — no behaviour change |
-| `test` | Adding or updating tests |
-| `chore` | Config files, tooling, dependencies, migrations |
-| `docs` | Documentation only |
-| `style` | Formatting, whitespace — zero logic change |
-| `perf` | Performance improvement |
+| Type       | Use when                                   |
+| ---------- | ------------------------------------------ |
+| `feat`     | New feature or user-facing capability      |
+| `fix`      | Bug fix                                    |
+| `refactor` | Code restructure with no behaviour change  |
+| `test`     | Adding or updating tests                   |
+| `chore`    | Config, tooling, dependencies, migrations  |
+| `docs`     | Documentation only                         |
+| `style`    | Formatting, whitespace — zero logic change |
+| `perf`     | Performance improvement                    |
 
 ### Scopes
 
-Use the area of the system the commit touches:
+`auth` · `dashboard` · `buckets` · `income` · `expense` · `decision` · `weekly` · `history` · `calculation` · `api` · `db` · `config` · `ui` · `tests` · `blazor` · `fluxor` · `mudblazor`
 
-`auth` · `dashboard` · `buckets` · `income` · `expense` · `decision` · `weekly` · `history` · `calculation` · `api` · `db` · `config` · `ui` · `tests`
+### Summary Rules
 
-### Summary rules
-
-- Lowercase, present tense, imperative mood: `add`, `fix`, `remove`, `update`
+- Lowercase, present tense, imperative mood
 - No period at the end
 - Maximum 72 characters on the first line
 - Blank line between summary and body
@@ -251,29 +412,28 @@ Use the area of the system the commit touches:
 ### Examples
 
 ```bash
-# Simple one-liner
+# Simple
 git commit -m "feat(decision): implement risk evaluation algorithm"
 
-# With body for a larger change
-git commit -m "feat(calculation): add SafeToSpend and DailyLimit formulas
+# With body
+git commit -m "feat(calculation): implement SafeToSpend and DailyLimit formulas
 
 Resolves #8
 
-- CalculateSafeToSpend: SUM(flexible remaining) - SUM(unpaid fixed)
-- CalculateDailyLimit: (SafeToSpend / DaysRemaining) × PaceAdjustment
-- PaceAdjustment: ≤0.8 → ×1.15, ≤1.0 → ×1.00, ≤1.2 → ×0.85, >1.2 → ×0.70
-- Added 7 unit tests covering edge cases"
+- GetSafeToSpend: SUM(flex remaining) - SUM(unpaid fixed). Savings excluded.
+- GetDailyLimit: (SafeToSpend / DaysRemaining) × PaceAdjustment
+- Pace adjustment: ≤0.8→×1.15, ≤1.0→×1.00, ≤1.2→×0.85, >1.2→×0.70
+- Added 6 unit tests covering edge cases including negative clamping"
 
 # Bug fix
-git commit -m "fix(calculation): SafeToSpend no longer returns negative values
+git commit -m "fix(calculation): clamp SafeToSpend to minimum 0
 
 Resolves #15
 
-Previously, when fixed obligations exceeded flexible remaining,
-SafeToSpend returned negative numbers. Now clamped to 0 minimum
-with Math.Max(0m, result)."
+When fixed obligations exceeded flexible remaining, SafeToSpend
+returned a negative value. Added Math.Max(0m, result) clamp."
 
-# Database migration
+# Migration
 git commit -m "chore(db): add unique index on BucketBalance (BucketId + CycleId)
 
 Prevents duplicate balance rows for the same bucket in the same cycle."
@@ -282,242 +442,199 @@ Prevents duplicate balance rows for the same bucket in the same cycle."
 git commit -m "feat(ui): add NumPad component for amount entry screens
 
 - 3×4 grid with 000 key and backspace
-- Prevents leading zeros and enforces max length
+- Prevents leading zeros, enforces 7-digit maximum
 - Used in both income and decision flows"
 ```
 
-### What NOT to do
+### What NOT to Do
 
 ```bash
-# Too vague
-git commit -m "fix stuff"
-git commit -m "wip"
-git commit -m "changes"
-
-# Past tense
-git commit -m "added HeroCard"      # wrong
-git commit -m "add HeroCard"        # correct
-
-# Bundled unrelated changes
-git commit -m "feat(dashboard): add HeroCard and fix login bug"
+git commit -m "fix stuff"          # too vague
+git commit -m "wip"                # not a commit
+git commit -m "changes"            # meaningless
+git commit -m "added HeroCard"     # past tense
+git commit -m "feat(dashboard): add HeroCard and fix login bug"  # bundled
 ```
 
 ---
 
-## Pull Request Process
+## Environment Variables
 
-### Before opening a PR
+### Backend (`appsettings.Development.json` — gitignored)
 
-- [ ] `dotnet build` passes with zero errors
-- [ ] `dotnet test` passes with zero failures
-- [ ] `npm run build` passes (frontend)
-- [ ] Branch is up to date with `develop`
-- [ ] All checkboxes in the issue body are ticked
-- [ ] No debug code, commented-out blocks, or `Console.WriteLine` left in
-- [ ] No hardcoded credentials or connection strings
-- [ ] JWT secret is NOT the placeholder value from setup
-
-### Opening the PR
-
-Use the template below. GitHub auto-populates it from `PULL_REQUEST_TEMPLATE.md`.
-
-### PR title format
-
-```
-feat(dashboard): implement HeroCard with live SafeToSpend display (#12)
-fix(calculation): clamp SafeToSpend to minimum 0 (#15)
-chore(db): add BucketBalance unique index migration (#8)
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=monivise_dev;Username=postgres;Password=<your-password>"
+  },
+  "Jwt": {
+    "Key": "<64-char-random-hex>",
+    "Issuer": "monivise-api",
+    "Audience": "monivise-client"
+  }
+}
 ```
 
-### Labels to add
+### Backend (Production — environment variables only)
 
-Every PR must have at least one label from each group:
+| Variable                               | Description                                 |
+| -------------------------------------- | ------------------------------------------- |
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string (SSL required) |
+| `Jwt__Key`                             | 64-character cryptographically random key   |
+| `Jwt__Issuer`                          | `monivise-api`                              |
+| `Jwt__Audience`                        | `monivise-client`                           |
+| `ASPNETCORE_ENVIRONMENT`               | `Production`                                |
+| `ASPNETCORE_URLS`                      | `http://+:8080`                             |
 
-**Type label** (pick one): `feat` · `fix` · `refactor` · `chore` · `docs`
+### Frontend
 
-**Layer label** (pick all that apply): `backend` · `frontend` · `database` · `auth` · `api`
-
-**Phase label** (pick one): `phase-1` · `phase-2`
-
-### Reviewers
-
-- Every PR requires at least **one approving review** before merging
-- Assign your teammate as reviewer when you open the PR
-- Tag `@teammate` if it touches a file they are working on
-
-### Merging
-
-- Use **Squash and merge** for feature branches
-- The squash commit message must follow the commit convention
-- Delete the branch after merge
-
-### Draft PRs
-
-For early feedback before work is complete:
-
-```bash
-gh pr create --draft --title "feat(decision): implement risk algorithm" --body "Work in progress"
-```
+| Variable     | Description                                              |
+| ------------ | -------------------------------------------------------- |
+| `ApiBaseUrl` | Backend API base URL (set in `wwwroot/appsettings.json`) |
 
 ---
 
-## Code Review Guidelines
+## Deployment Guide
 
-### For the reviewer
+### Backend — Railway
 
-- Review within **24 hours** of being assigned
-- Be specific: "This query will produce N+1 requests — add `.ThenInclude`" not "This looks wrong"
-- Use these prefixes:
-  - **`[blocking]`** — must fix before merging
-  - **`[suggestion]`** — optional improvement
-  - **`[nit]`** — minor style preference, won't block
-
-### For the author
-
-- Respond to every comment — fix it or explain why not
-- Don't resolve reviewer comments yourself — let the reviewer verify
-- If a comment reveals misunderstanding, explain the intended design
-
-### Things reviewers always check for Monivise
-
-- Is there any financial math in a controller or React component? (must be in `FinancialCalculationService`)
-- Is there any EF query in a controller? (must be in service)
-- Does `CalculateSafeToSpend` handle the edge case where fixed > flexible? (must return 0, not negative)
-- Are all new `decimal` properties configured with `HasPrecision(18, 2)`?
-- Does every new POST action have `[ValidateAntiForgeryToken]`? (backend) or proper input validation? (frontend)
-- Are new enum values stored as strings (not integers) in the DB?
-- Does the frontend show `--` when `dailyLimit === 0` instead of `NaN`?
-- Are all currency values formatted with `formatNGN()` consistently?
-
-
-## Definition of Done
-
-An issue is **Done** when ALL of the following are true:
-
-- [ ] All task checkboxes in the issue body are ticked
-- [ ] All acceptance criteria in the issue body are met
-- [ ] `dotnet build` passes with zero warnings and zero errors
-- [ ] `dotnet test` passes with zero failures
-- [ ] `npm run build` passes (if frontend changes)
-- [ ] The PR has been reviewed and approved by at least one teammate
-- [ ] The PR has been squash-merged into `develop`
-- [ ] The feature branch has been deleted
-- [ ] The issue is closed on GitHub
-- [ ] The card is in the **Done** column on the Project board
-- [ ] **Financial calculations verified:** SafeToSpend, DailyLimit, and RiskLevel match expected values for test scenarios
-
-If any of these are not true, the issue is not done — move the card back.
-
----
-
-## Architecture Rules
-
-These rules are non-negotiable. A PR that violates them will not be merged.
-
-### Rule 1 — Domain is dependency-free
-
-`Monivise.Domain.csproj` may only reference base .NET packages. No Entity Framework, no ASP.NET, no third-party libraries. If you need EF in Domain, you have the wrong layer.
-
-### Rule 2 — No financial math outside FinancialCalculationService
-
-Controllers and React components call services. `FinancialCalculationService` contains ALL financial math. A controller or component that calculates `safeToSpend` directly is a critical bug.
-
-### Rule 3 — No EF queries in controllers
-
-Controllers call services. Services query the database. The only exception is `Program.cs` for DI registration.
-
-### Rule 4 — No business logic in views or React components
-
-Views and components render data. Computed properties belong in ViewModels, selectors, or services.
-
-### Rule 5 — All secrets via configuration
-
-No API keys, passwords, or connection strings in source code. Use `appsettings.Development.json` locally (gitignored) and environment variables in production.
-
-### Rule 6 — Use enums, never magic strings
-
-```csharp
-// Wrong
-[Authorize(Roles = "Admin")]
-
-// Correct
-[Authorize(Roles = Roles.Admin)]
+```
+1. Push solution to GitHub
+2. railway.app → New Project → Deploy from GitHub → select Monivise.API
+3. Add PostgreSQL plugin → copy DATABASE_URL
+4. Set environment variables in Railway dashboard
+5. Railway auto-detects .NET and builds
+6. Run migrations: Railway console → dotnet ef database update
+7. Note your Railway URL (e.g. monivise-api.railway.app)
 ```
 
-### Rule 7 — Every POST action has validation
+### Frontend — Azure Static Web Apps
 
-Backend: `[ValidateAntiForgeryToken]` on every POST. Frontend: Input validation before API calls.
+```
+Push monivise-web to GitHub
+Create Azure Static Web App → Deploy from GitHub → select monivise-web
+Build configuration: output location = wwwroot
+Add app setting: ApiBaseUrl=https://monivise-api.railway.app
+Deploy
+Update Railway's CORS allowed origins to your Azure URL
+```
 
-### Rule 8 — Currency formatting is centralized
+### Pre-Launch Checklist
 
-All currency displays use `formatNGN()`. Never inline `toLocaleString` or manual `₦` concatenation.
-
-### Rule 9 — Future days never show fabricated data
-
-Weekly view: future days show empty bars + budget line only. Never simulate or estimate future spending.
+- [ ] Register a real account and log in from the deployed URL
+- [ ] Create 6 buckets summing to exactly 100%
+- [ ] Add income — allocation preview matches actual server allocation
+- [ ] Safe to Spend = Flexible remaining MINUS unpaid Fixed (Savings excluded)
+- [ ] Simulate a spend exceeding bucket balance — Risk shows Critical
+- [ ] Confirm a spend — dashboard refreshes, SafeToSpend decreases by exact amount
+- [ ] Weekly view: bars for today and past only, never future
+- [ ] History shows all transactions newest first with correct icons and amounts
+- [ ] JWT key is NOT the placeholder value from setup
+- [ ] No CORS errors in browser console
+- [ ] Swagger disabled or protected in production
 
 ---
-
 
 ## Useful Commands
-
-### Backend
 
 ```bash
 # Build entire solution
 dotnet build
 
-# Run tests
-dotnet test Monivise.Tests
+# Run all tests
+dotnet test tests/Monivise.UnitTests
 
 # Run with hot reload
-dotnet watch run --project Monivise.API
+dotnet watch run --project src/Monivise.API
 
 # Add migration
-dotnet ef migrations add <Name> --project Monivise.Infrastructure --startup-project Monivise.API
+dotnet ef migrations add <Name> \
+  --project src/Monivise.Infrastructure \
+  --startup-project src/Monivise.API
 
 # Apply migration
-dotnet ef database update --project Monivise.Infrastructure --startup-project Monivise.API
+dotnet ef database update \
+  --project src/Monivise.Infrastructure \
+  --startup-project src/Monivise.API
 
-# Generate JWT secret
+# Generate a cryptographically secure JWT key
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
 
-### Frontend
+# Frontend dev server
+cd monivise-web && dotnet watch run
 
-```bash
-# Install dependencies
-npm install
+# Frontend production build
+cd monivise-web && dotnet publish -c Release -o ./dist
 
-# Dev server
-npm run dev
-
-# Production build
-npm run build
-
-# Lint
-npm run lint
-```
-
-### Git workflow
-
-```bash
-# Sync and branch
+# Create a branch and push
 git checkout develop && git pull origin develop
 git checkout -b feature/issue-<number>-<description>
-
-# Commit and push
-git add . && git commit -m "feat(scope): summary"
 git push origin HEAD
 
-# PR and review
+# Open a PR from CLI
 gh pr create --fill
-gh pr review <number> --approve
 
-# Cleanup after merge
-git checkout develop && git pull && git branch -d <branch>
+# Clean up after merge
+git checkout develop && git pull
+git branch -d feature/issue-<number>-<description>
+git push origin --delete feature/issue-<number>-<description>
 ```
 
+---
+
+## API Endpoint Reference
+
+### Auth
+
+| Method | Endpoint             | Auth | Description               |
+| ------ | -------------------- | ---- | ------------------------- |
+| POST   | `/api/auth/register` | No   | Create account            |
+| POST   | `/api/auth/login`    | No   | Authenticate, receive JWT |
+
+### Dashboard
+
+| Method | Endpoint         | Description                                                   |
+| ------ | ---------------- | ------------------------------------------------------------- |
+| GET    | `/api/dashboard` | SafeToSpend, DailyLimit, Pace, all buckets with live balances |
+
+### Budget Cycles
+
+| Method | Endpoint             | Description                           |
+| ------ | -------------------- | ------------------------------------- |
+| POST   | `/api/cycles/start`  | Create active cycle for current month |
+| GET    | `/api/cycles/active` | Get active cycle details              |
+
+### Buckets
+
+| Method | Endpoint            | Description                                    |
+| ------ | ------------------- | ---------------------------------------------- |
+| GET    | `/api/buckets`      | List all active buckets with live balance data |
+| POST   | `/api/buckets`      | Create bucket                                  |
+| PUT    | `/api/buckets/{id}` | Update name, icon, %, type                     |
+| DELETE | `/api/buckets/{id}` | Soft-delete (IsActive = false)                 |
+
+### Transactions
+
+| Method | Endpoint                          | Description                                     |
+| ------ | --------------------------------- | ----------------------------------------------- |
+| POST   | `/api/transactions/income`        | Record income, auto-allocate across all buckets |
+| POST   | `/api/transactions/expense`       | Record expense against a specific bucket        |
+| GET    | `/api/transactions/current-cycle` | All transactions for active cycle               |
+
+### Decision Engine
+
+| Method | Endpoint                 | Description                                                     |
+| ------ | ------------------------ | --------------------------------------------------------------- |
+| POST   | `/api/decision/simulate` | Run consequence simulation — returns SpendImpact, no data saved |
+
+### Weekly Projection
+
+| Method | Endpoint                | Description                            |
+| ------ | ----------------------- | -------------------------------------- |
+| GET    | `/api/dashboard/weekly` | 7-day projection based on current pace |
+
+---
+
 <div align="center">
-  <sub>Monivise · Spend with Confidence · Built with Precision</sub>
+  <sub>Monivise · Personal Financial Decision Engine · Built with precision</sub>
 </div>
