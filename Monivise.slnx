@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Monivise.API/Monivise.API.csproj" />
+    <Project Path="src/Monivise.App/Monivise.App.csproj" />
+    <Project Path="src/Monivise.Application/Monivise.Application.csproj" />
+    <Project Path="src/Monivise.Domain/Monivise.Domain.csproj" />
+    <Project Path="src/Monivise.Infrastructure/Monivise.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Monivise.UnitTests/Monivise.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,7 @@
+appsettings.Development.json
+
+.git/
+.github/
+bin/
+obj/
+.vs/
