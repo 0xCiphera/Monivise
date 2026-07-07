@@ -9,8 +9,6 @@ namespace Monivise.Application.DTOs.Buckets
         public string? Name { get; set; }
         public string? Icon { get; set; }
         public string? Color { get; set; }
-        public string? Type { get; set; }
-        public decimal? AllocationPercent { get; set; }
-        public decimal? SavingsTarget { get; set; }
+       
     }
 }

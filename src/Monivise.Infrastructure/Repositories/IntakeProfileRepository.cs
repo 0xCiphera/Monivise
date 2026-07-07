@@ -19,5 +19,13 @@ namespace Monivise.Infrastructure.Repositories
 
         public async Task SaveChangesAsync(CancellationToken ct = default)
             => await db.SaveChangesAsync(ct);
+
+        public Task DeleteItemsByProfileIdAsync(Guid profileId, CancellationToken ct = default)
+            => db.IntakeItems.Where(i => i.IntakeProfileId == profileId).ExecuteDeleteAsync(ct);
+        public void DetachItems(IEnumerable<IntakeItem> items)
+        {
+            foreach (var item in items)
+                db.Entry(item).State = EntityState.Detached;
+        }
     }
 }

@@ -30,6 +30,9 @@ namespace Monivise.API.Controllers
             {
                 profile = existing;
                 profile.UpdateBaseline(dto.BaselineIncome);
+                var staleItems = profile.Items.ToList();          // snapshot before clearing
+                await intakes.DeleteItemsByProfileIdAsync(profile.Id, ct);
+                intakes.DetachItems(staleItems);                    // stop EF tracking the deleted rows
                 profile.ClearItems();
             }
 

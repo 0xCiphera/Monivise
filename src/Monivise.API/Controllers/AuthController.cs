@@ -33,7 +33,10 @@ namespace Monivise.API.Controllers
                     Status = 409
                 });
 
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(null!, dto.Password);
+            if (string.IsNullOrWhiteSpace(dto.Password))
+                return BadRequest(new ProblemDetails { Title = "Password is required", Status = 400 });
+
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
             var user = DomainUser.Create(dto.Email, passwordHash, dto.DisplayName, dto.Currency);
 
             // Generate refresh token

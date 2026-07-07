@@ -132,21 +132,22 @@ namespace Monivise.Application.Services
             decimal dailyLimitBefore = GetDailyLimit(safeToSpendBefore, pace, cycle);
             decimal bucketBalanceBefore = GetBalance(bucketId, txnList);
 
-            decimal safeToSpendAfter = Math.Max(0m, safeToSpendBefore - amount);
+            decimal rawSafeToSpendAfter = safeToSpendBefore - amount;      // unclamped — feeds risk logic
+            decimal safeToSpendAfter = Math.Max(0m, rawSafeToSpendAfter);  // clamped — feeds display/DTO
             decimal bucketBalanceAfter = bucketBalanceBefore - amount;
             decimal dailyLimitAfter = cycle.RemainingDays > 0 ? safeToSpendAfter / cycle.RemainingDays : 0m;
 
             decimal allocated = GetAllocated(bucketId, txnList);
             decimal spent = GetSpent(bucketId, txnList);
             decimal depletionPct = allocated > 0
-                ? Math.Min(100m, Math.Round((spent + amount) / allocated * 100m, 1))
-                : 100m;
+                 ? Math.Round((spent + amount) / allocated * 100m, 1)   // no upper clamp — Critical needs >100 to be reachable
+                 : 100m;
 
             var flexBuckets = bucketList.Where(b => b.Type == BucketType.Flexible && b.IsActive);
             decimal flexBudget = flexBuckets.Sum(b => GetAllocated(b.Id, txnList));
             decimal avgDailyBudget = cycle.TotalDays > 0 ? flexBudget / cycle.TotalDays : 0m;
 
-            RiskLevel risk = GetRiskLevel(safeToSpendAfter, dailyLimitAfter, avgDailyBudget, depletionPct);
+            RiskLevel risk = GetRiskLevel(rawSafeToSpendAfter, dailyLimitAfter, avgDailyBudget, depletionPct);
 
             var regretSignals = new List<string>();
             if (dailyLimitAfter < avgDailyBudget * 0.4m)

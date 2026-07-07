@@ -10,5 +10,7 @@ namespace Monivise.Application.Interfaces.Repositories
         Task<IntakeProfile?> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
         Task AddAsync(IntakeProfile profile, CancellationToken ct = default);
         Task SaveChangesAsync(CancellationToken ct = default);
+        Task DeleteItemsByProfileIdAsync(Guid profileId, CancellationToken ct = default);
+        void DetachItems(IEnumerable<IntakeItem> items);
     }
 }

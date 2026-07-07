@@ -39,7 +39,7 @@ namespace Monivise.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateBucketDto dto, CancellationToken ct)
+        public async Task<IActionResult> Create()
         {
             return UnprocessableEntity(new
             {
@@ -56,11 +56,11 @@ namespace Monivise.API.Controllers
 
             if (bucket.UserId != UserId) return Forbid();
 
-            if (!Enum.TryParse<BucketType>(dto.Type, true, out var bucketType))
-                return BadRequest(new ProblemDetails { Title = "Invalid bucket type" });
-
-            bucket.Update(dto.Name!, dto.Icon!, dto.Color!, bucketType,
-              bucket.AllocationPercent, dto.SavingsTarget);
+            bucket.Update(
+                dto.Name ?? bucket.Name,
+                dto.Icon ?? bucket.Icon,
+                dto.Color ?? bucket.Color,
+                bucket.Type, bucket.AllocationPercent, bucket.SavingsTarget);
 
             await _buckets.SaveChangesAsync(ct);
             return NoContent();
