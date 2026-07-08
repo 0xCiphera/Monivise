@@ -1,0 +1,87 @@
+@using Monivise.App.Components.Molecules
+@using Monivise.App.State.Actions
+@page "/weekly"
+@layout AppShell
+@attribute [Authorize]
+@inject ReviewApiClient Api
+@inject IDispatcher Dispatcher
+
+@if (isLoading)
+{
+    <p style="text-align:center; color: var(--mv-text-secondary);">Loading your weekly review…</p>
+}
+else if (errorMessage is not null)
+{
+    <div class="mv-card" style="text-align:center;">
+        <p class="mv-field__error">@errorMessage</p>
+        <Button Variant="secondary" OnClick="Load">Retry</Button>
+    </div>
+}
+else if (review is { } r)
+{
+    <div class="mv-card mv-card--hero">
+        <p class="mv-card__label" style="font-size:12px; margin:0 0 4px;">Projected end-of-cycle balance</p>
+        <p style="font-size: var(--mv-fs-2xl); font-weight:600; margin:0;">@r.ProjectedEndBalance.ToString("C0")</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top: var(--mv-space-3);">
+        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:10px; padding:12px;">
+            <p style="font-size:12px; color:var(--mv-text-tertiary); margin:0;">Daily average</p>
+            <p style="font-size: var(--mv-fs-md); font-weight:600; margin:2px 0 0;">@r.DailyAverage.ToString("C0")</p>
+        </div>
+        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:10px; padding:12px;">
+            <p style="font-size:12px; color:var(--mv-text-tertiary); margin:0;">Pace</p>
+            <p style="font-size: var(--mv-fs-md); font-weight:600; margin:2px 0 0;">@r.PaceLabel</p>
+        </div>
+    </div>
+
+    @if (r.Underspend > 0)
+    {
+        <div style="height: var(--mv-space-4);"></div>
+        <div class="mv-card" style="text-align:center;">
+            <p style="margin:0 0 4px;">You underspent @r.Underspend.ToString("C0") this week.</p>
+            <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:0 0 var(--mv-space-3);">Sweep it into a goal?</p>
+            <Button Variant="primary" OnClick="OpenSweep">Sweep to goal</Button>
+        </div>
+    }
+
+    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 8px;">Bucket breakdown</p>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+        @foreach (var bucket in r.BucketBreakdown)
+        {
+            <BucketRow Bucket="bucket" />
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private string? errorMessage;
+    private WeeklyReviewDto? review;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            review = await Api.GetWeeklyAsync();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Network error. Please check your connection.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenSweep() => Dispatcher.Dispatch(new ShowInfoAction("Pick a goal from Settings to sweep into."));
+}

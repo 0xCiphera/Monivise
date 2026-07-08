@@ -1,0 +1,57 @@
+@using Monivise.App.State;
+@using Monivise.App.State.Actions;
+@page "/register"
+@inject IState<AuthState> AuthState
+@inject IDispatcher Dispatcher
+
+<h1 class="mv-header__title" style="margin-bottom: var(--mv-space-6);">Create your account</h1>
+
+<Input Label="Display name" Value="@displayName" ValueChanged="v => displayName = v"
+       ErrorMessage="@(fieldErrors.GetValueOrDefault("displayName"))" />
+<Input Label="Email" Type="email" InputMode="email" Value="@email" ValueChanged="v => email = v"
+       ErrorMessage="@(fieldErrors.GetValueOrDefault("email"))" />
+<Input Label="Password" Type="password" Value="@password" ValueChanged="v => password = v"
+       Help="At least 8 characters." ErrorMessage="@(fieldErrors.GetValueOrDefault("password"))" />
+
+<div class="mv-field">
+    <label class="mv-field__label">Currency</label>
+    <select class="mv-field__input" @bind="currency">
+        <option value="NGN">NGN — Nigerian Naira</option>
+        <option value="USD">USD — US Dollar</option>
+        <option value="GBP">GBP — British Pound</option>
+    </select>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(AuthState.Value.ErrorMessage))
+{
+    <p class="mv-field__error mv-shake" role="alert" style="margin-bottom: var(--mv-space-4);">@AuthState.Value.ErrorMessage</p>
+}
+
+<Button Variant="primary" IsLoading="@AuthState.Value.IsLoading" OnClick="Submit">Create account</Button>
+
+<p style="text-align:center; font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin-top: var(--mv-space-4);">
+    Already have an account? <a href="/login">Sign in</a>
+</p>
+
+@code {
+    private string displayName = "";
+    private string email = "";
+    private string password = "";
+    private string currency = "NGN";
+    private Dictionary<string, string> fieldErrors = new();
+
+    private void Submit()
+    {
+        fieldErrors.Clear();
+        if (string.IsNullOrWhiteSpace(displayName))
+            fieldErrors["displayName"] = "Enter your name.";
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+            fieldErrors["email"] = "Enter a valid email address.";
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+            fieldErrors["password"] = "Password must be at least 8 characters.";
+
+        if (fieldErrors.Count > 0) return;
+
+        Dispatcher.Dispatch(new RegisterAction(displayName, email, password, currency));
+    }
+}

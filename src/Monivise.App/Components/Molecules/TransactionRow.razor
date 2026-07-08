@@ -1,0 +1,57 @@
+﻿<div class="mv-tx-row">
+    <span class="mv-tx-row__dot" style="background:@(Tx.Kind == "Income" ? "var(--mv-positive)" : "var(--mv-text-tertiary)");"></span>
+    <div class="mv-tx-row__body">
+        <p class="mv-tx-row__name">@(Tx.BucketName ?? Tx.Note ?? Tx.Kind)</p>
+        <p class="mv-tx-row__date">@Tx.Date.ToString("MMM d")@(string.IsNullOrWhiteSpace(Tx.Note) ? "" : $" · {Tx.Note}")</p>
+    </div>
+    <p class="mv-tx-row__amount" style="color:@(Tx.Kind == "Income" ? "var(--mv-positive)" : "var(--mv-text-primary)");">
+        @(Tx.Kind == "Income" ? "+" : "-")@Math.Abs(Tx.Amount).ToString("C0")
+    </p>
+</div>
+
+<style>
+    .mv-tx-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--mv-border);
+    }
+
+        .mv-tx-row:last-child {
+            border-bottom: none;
+        }
+
+    .mv-tx-row__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .mv-tx-row__body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .mv-tx-row__name {
+        font-size: var(--mv-fs-md);
+        margin: 0;
+    }
+
+    .mv-tx-row__date {
+        font-size: var(--mv-fs-xs);
+        color: var(--mv-text-tertiary);
+        margin: 2px 0 0;
+    }
+
+    .mv-tx-row__amount {
+        font-size: var(--mv-fs-md);
+        font-weight: 600;
+        margin: 0;
+    }
+</style>
+
+@code {
+    [Parameter] public TransactionDto Tx { get; set; } = default!;
+}

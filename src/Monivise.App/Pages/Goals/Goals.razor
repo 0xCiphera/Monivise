@@ -1,0 +1,160 @@
+@using Monivise.App.State.Actions
+@page "/goals"
+@layout AppShell
+@attribute [Authorize]
+@inject GoalApiClient Api
+@inject IDispatcher Dispatcher
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--mv-space-4);">
+    <p style="font-size:var(--mv-fs-sm);font-weight:600;color:var(--mv-text-secondary);margin:0;">Goals</p>
+    <button style="background:none;border:none;color:var(--mv-accent);font-size:22px;cursor:pointer;min-width:44px;min-height:44px;"
+            aria-label="New goal" @onclick="() => showCreate = true">
+        +
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <p style="text-align:center;color:var(--mv-text-secondary);">Loading goals…</p>
+}
+else if (errorMessage is not null)
+{
+    <div class="mv-card" style="text-align:center;">
+        <p class="mv-field__error">@errorMessage</p>
+        <Button Variant="secondary" OnClick="Load">Retry</Button>
+    </div>
+}
+else if (goals.Count == 0)
+{
+    <div class="mv-card" style="text-align:center;color:var(--mv-text-secondary);">No goals yet. Tap + to add one.</div>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:10px;">
+        @foreach (var g in goals)
+        {
+            var percent = g.TargetAmount > 0 ? (double)(g.CurrentAmount / g.TargetAmount * 100) : 0;
+            <div class="mv-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-size:var(--mv-fs-md);font-weight:600;">@g.Name</span>
+                    <Badge Variant="@(g.IsActive ? "positive" : "neutral")">@(g.IsActive ? "Active" : "Inactive")</Badge>
+                </div>
+                <ProgressBar Percent="percent" Height="5" />
+                <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:var(--mv-fs-xs);color:var(--mv-text-tertiary);">
+                    <span>@g.CurrentAmount.ToString("C0") / @g.TargetAmount.ToString("C0")</span>
+                </div>
+                @if (!g.IsActive)
+                {
+                    <div style="margin-top:var(--mv-space-3);">
+                        <Button Variant="secondary" OnClick="() => Activate(g.Id)">Set active</Button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@if (showCreate)
+{
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:40;">
+        <div class="mv-card mv-scale-in" style="width:80%;background:var(--mv-surface);">
+            <p style="font-weight:600;margin:0 0 var(--mv-space-4);">New goal</p>
+            <Input Label="Name" Value="@name" ValueChanged="v => name = v" ErrorMessage="@nameError" />
+            <Input Label="Target amount" Type="number" InputMode="decimal" Value="@targetText" ValueChanged="v => targetText = v" ErrorMessage="@targetError" />
+            @if (createError is not null)
+            {
+                <p class="mv-field__error mv-shake" role="alert">@createError</p>
+            }
+            <div style="display:flex;gap:10px;margin-top:var(--mv-space-3);">
+                <Button Variant="secondary" OnClick="() => showCreate = false">Cancel</Button>
+                <Button Variant="primary" IsLoading="isCreating" OnClick="Create">Create</Button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GoalDto> goals = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private bool showCreate;
+    private bool isCreating;
+    private string name = "";
+    private string targetText = "";
+    private string? nameError;
+    private string? targetError;
+    private string? createError;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            goals = await Api.GetGoalsAsync();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Network error. Please check your connection.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Create()
+    {
+        nameError = string.IsNullOrWhiteSpace(name) ? "Enter a goal name." : null;
+        targetError = decimal.TryParse(targetText, out var target) && target > 0 ? null : "Enter a valid amount.";
+        if (nameError is not null || targetError is not null) return;
+
+        isCreating = true;
+        createError = null;
+        try
+        {
+            await Api.CreateAsync(new CreateGoalRequest(name, target));
+            showCreate = false;
+            name = "";
+            targetText = "";
+            await Load();
+        }
+        catch (ApiException ex)
+        {
+            createError = ex.Message;
+        }
+        catch (Exception)
+        {
+            createError = "Network error. Please check your connection.";
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private async Task Activate(Guid id)
+    {
+        try
+        {
+            await Api.ActivateAsync(id);
+            Dispatcher.Dispatch(new ShowSuccessAction("Goal activated."));
+            await Load();
+        }
+        catch (ApiException ex)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction(ex.Message));
+        }
+        catch (Exception)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction("Network error. Please check your connection."));
+        }
+    }
+}

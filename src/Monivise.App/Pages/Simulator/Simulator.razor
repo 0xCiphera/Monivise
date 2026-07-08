@@ -1,0 +1,93 @@
+@using Monivise.App.Components.Molecules;
+@using Monivise.App.State;
+@using Monivise.App.State.Actions;
+
+@page "/simulator"
+@layout AppShell
+@attribute [Authorize]
+@inject IState<AppState> AppState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Nav
+
+@if (AppState.Value.SimulatorBucketId is null)
+{
+    <p style="font-size: var(--mv-fs-lg); font-weight:600; margin:0 0 var(--mv-space-4);">Which bucket?</p>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+        @foreach (var bucket in AppState.Value.Buckets)
+        {
+            <BucketRow Bucket="bucket" OnSelect="SelectBucket" />
+        }
+    </div>
+}
+else
+{
+    var bucket = AppState.Value.Buckets.FirstOrDefault(b => b.Id == AppState.Value.SimulatorBucketId);
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom: var(--mv-space-4);">
+        <Button Variant="ghost" OnClick="() => Dispatcher.Dispatch(new ClearSimulatorAction())">&larr; Back</Button>
+    </div>
+    <p style="font-size: var(--mv-fs-md); font-weight:600; margin:0;">@bucket?.Name</p>
+    <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:2px 0 var(--mv-space-4);">Balance: @(bucket?.Balance.ToString("C0")) left</p>
+
+    <p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-3) 0;">@amountInput.ToString("C0")</p>
+    <NumPad Value="@amountText" ValueChanged="OnAmountChanged" />
+
+    <div style="height: var(--mv-space-4);"></div>
+    <Button Variant="secondary" Disabled="@(amountInput <= 0)" IsLoading="@AppState.Value.SimulatorIsLoading" OnClick="Preview">See consequence</Button>
+
+    @if (AppState.Value.SimulatorError is not null)
+    {
+        <p class="mv-field__error mv-shake" role="alert" style="margin-top: var(--mv-space-3);">@AppState.Value.SimulatorError</p>
+    }
+
+    @if (AppState.Value.SimulatorPreview is { } preview)
+    {
+        <div style="height: var(--mv-space-4);"></div>
+        <Badge Variant="@(preview.CanAfford ? (preview.PaceScore >= 0.7m ? "warning" : "positive") : "danger")">
+            @(preview.CanAfford ? (preview.PaceScore >= 0.7m ? "Tight pace" : "On pace") : "Not affordable")
+        </Badge>
+        <div style="height: var(--mv-space-3);"></div>
+        <ConsequenceCard Preview="preview" />
+        <div style="height: var(--mv-space-4);"></div>
+        <div style="display:flex; gap:10px;">
+            <Button Variant="secondary" OnClick="() => Dispatcher.Dispatch(new ClearSimulatorAction())">Cancel</Button>
+            <Button Variant="@(preview.CanAfford ? "primary" : "danger")" OnClick="Commit">Approve</Button>
+        </div>
+    }
+}
+
+@code {
+    private string amountText = "0";
+    private decimal amountInput => decimal.TryParse(amountText, out var v) ? v : 0;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Nav.Uri);
+        var rawQuery = uri.Query.TrimStart('?');
+
+        if (!string.IsNullOrEmpty(rawQuery))
+        {
+            var query = rawQuery
+                .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Select(pair => pair.Split('=', 2))
+                .ToDictionary(
+                    parts => Uri.UnescapeDataString(parts[0]),
+                    parts => parts.Length > 1 ? Uri.UnescapeDataString(parts[1]) : "");
+
+            if (query.TryGetValue("bucket", out var bucketId) && Guid.TryParse(bucketId, out var id))
+            {
+                Dispatcher.Dispatch(new SetSimulatorBucketAction(id));
+            }
+        }
+    }
+
+    private void SelectBucket(BucketDto bucket) => Dispatcher.Dispatch(new SetSimulatorBucketAction(bucket.Id));
+
+    private void OnAmountChanged(string value)
+    {
+        amountText = value;
+        Dispatcher.Dispatch(new SetSimulatorAmountAction(amountInput));
+    }
+
+    private void Preview() => Dispatcher.Dispatch(new PreviewSimulationAction());
+    private void Commit() => Dispatcher.Dispatch(new CommitSimulationAction());
+}

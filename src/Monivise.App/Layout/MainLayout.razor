@@ -1,16 +1,33 @@
-﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+﻿@using Monivise.App.Components.Organisms
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+<div class="mv-shell">
+    @if (isOffline)
+    {
+        <div class="mv-offline-banner">You're offline. Changes will sync when reconnected.</div>
+    }
+    @Body
+    <ToastContainer />
 </div>
+
+@code {
+    private bool isOffline;
+    private DotNetObjectReference<MainLayout>? selfRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            selfRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("monivise.connectivity.register", selfRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnConnectivityChanged(bool online)
+    {
+        isOffline = !online;
+        StateHasChanged();
+    }
+}

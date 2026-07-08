@@ -19,7 +19,5 @@ namespace Monivise.Application.DTOs.Buckets
         public decimal Spent { get; set; }
         public decimal Balance { get; set; }
         public decimal UsedPercent { get; set; }
-        // Added for frontend sync
-        public string BucketIcon { get; set; } = string.Empty;
     }
 }

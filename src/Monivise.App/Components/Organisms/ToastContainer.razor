@@ -1,0 +1,55 @@
+﻿@using Monivise.App.State
+@using Monivise.App.State.Actions
+@inherits FluxorComponent
+@inject IState<AppState> AppState
+@inject IDispatcher Dispatcher
+
+<div class="mv-toast-container">
+    @foreach (var msg in AppState.Value.Messages)
+    {
+        <Toast Message="@msg.Text" Variant="@msg.Variant" OnDismiss="() => Dismiss(msg.Id)" />
+    }
+</div>
+
+<style>
+    .mv-toast-container {
+        position: absolute;
+        top: calc(var(--mv-safe-top) + 8px);
+        left: 12px;
+        right: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 50;
+        pointer-events: none;
+    }
+
+        .mv-toast-container > * {
+            pointer-events: auto;
+        }
+</style>
+
+@code {
+    private void Dismiss(Guid id) => Dispatcher.Dispatch(new DismissMessageAction(id));
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        AppState.StateChanged += async (_, _) =>
+        {
+            foreach (var msg in AppState.Value.Messages.ToList())
+            {
+                if (msg.Variant != "error")
+                {
+                    _ = AutoDismiss(msg.Id);
+                }
+            }
+        };
+    }
+
+    private async Task AutoDismiss(Guid id)
+    {
+        await Task.Delay(4000);
+        Dispatcher.Dispatch(new DismissMessageAction(id));
+    }
+}

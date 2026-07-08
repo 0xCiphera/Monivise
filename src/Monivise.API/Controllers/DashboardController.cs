@@ -71,7 +71,6 @@ namespace Monivise.API.Controllers
                 UsedPercent = _calc.GetAllocated(b.Id, txns) > 0
                     ? Math.Round(_calc.GetSpent(b.Id, txns) / _calc.GetAllocated(b.Id, txns) * 100, 1)
                     : 0m,
-                BucketIcon = b.Icon
             }).ToList();
 
             return Ok(new DashboardDto

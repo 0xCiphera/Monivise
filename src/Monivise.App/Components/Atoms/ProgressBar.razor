@@ -1,0 +1,25 @@
+<div class="mv-progress" style="height:@(Height)px;">
+    <div class="mv-progress__fill" style="width:@(clamped)%; background:@Color;"></div>
+</div>
+
+<style>
+    .mv-progress {
+        width: 100%;
+        background: var(--mv-surface-sunken);
+        border-radius: var(--mv-radius-pill);
+        overflow: hidden;
+    }
+
+    .mv-progress__fill {
+        height: 100%;
+        border-radius: var(--mv-radius-pill);
+        transition: width var(--mv-motion-slow) var(--mv-ease-standard);
+    }
+</style>
+
+@code {
+    [Parameter] public double Percent { get; set; }
+    [Parameter] public int Height { get; set; } = 5;
+    [Parameter] public string Color { get; set; } = "var(--mv-positive)";
+    private double clamped => Math.Clamp(Percent, 0, 100);
+}

@@ -1,0 +1,26 @@
+@using Monivise.App.Components.Molecules
+@using Monivise.App.State;
+@page "/buckets"
+@layout AppShell
+@attribute [Authorize]
+@inject IState<AppState> AppState
+@inject NavigationManager Nav
+
+<HintBox>Allocations are set by your chosen pathway. Re-run onboarding to change them.</HintBox>
+<div style="height: var(--mv-space-4);"></div>
+
+@if (AppState.Value.Buckets.Count == 0)
+{
+    <div class="mv-card" style="text-align:center; color: var(--mv-text-secondary);">No buckets yet.</div>
+}
+else
+{
+    <div style="display:flex; flex-direction:column; gap:8px;">
+        @foreach (var bucket in AppState.Value.Buckets)
+        {
+            <BucketRow Bucket="bucket" OnSelect='b => Nav.NavigateTo($"/simulator?bucket={b.Id}")' />
+            <ProgressBar Percent="@(bucket.Allocated > 0 ? (double)(bucket.Spent / bucket.Allocated * 100) : 0)"
+                         Color="@(bucket.Spent > bucket.Allocated ? "var(--mv-danger)" : "var(--mv-positive)")" />
+        }
+    </div>
+}

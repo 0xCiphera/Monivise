@@ -126,6 +126,7 @@ namespace Monivise.API.Controllers
                 Amount = t.Amount,
                 Note = t.Note,
                 Source = t.Source,
+                IncomeType = t.IncomeType.ToString(),
                 Date = t.Date
             }));
         }

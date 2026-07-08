@@ -1,0 +1,39 @@
+@using Monivise.App.Components.Organisms
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<div class="mv-header">
+    <p class="mv-header__brand">Monivise</p>
+    <p class="mv-header__title">@Title</p>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="mv-header__subtitle">@Subtitle</p>
+    }
+</div>
+
+<div class="mv-body">
+    @Body
+</div>
+
+@if (ShowFab)
+{
+    <button class="mv-fab" aria-label="Quick add" @onclick="OnFabClick">+</button>
+}
+
+<nav class="mv-nav" aria-label="Primary">
+    <NavItem Href="/dashboard" Icon="home" Label="Home" Active="@IsActive("/dashboard")" />
+    <NavItem Href="/buckets" Icon="wallet" Label="Buckets" Active="@IsActive("/buckets")" />
+    <NavItem Href="/weekly" Icon="chart" Label="Weekly" Active="@IsActive("/weekly")" />
+    <NavItem Href="/settings" Icon="settings" Label="Settings" Active="@IsActive("/settings")" />
+</nav>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public bool ShowFab { get; set; } = true;
+    [Parameter] public EventCallback OnFab { get; set; }
+
+    private bool IsActive(string path) => Nav.Uri.EndsWith(path, StringComparison.OrdinalIgnoreCase);
+
+    private Task OnFabClick() => OnFab.HasDelegate ? OnFab.InvokeAsync() : Task.CompletedTask;
+}

@@ -1,0 +1,63 @@
+<div class="mv-numpad" role="group" aria-label="Amount keypad">
+    @foreach (var key in keys)
+    {
+        <button type="button" class="mv-numpad__key" aria-label="@(key == "back" ? "Backspace" : key)" @onclick="() => Press(key)">
+            @if (key == "back")
+            {
+                <Icon Name="backspace" Size="20" />
+            }
+            else
+            {
+                @key
+            }
+        </button>
+    }
+</div>
+
+<style>
+    .mv-numpad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+
+    .mv-numpad__key {
+        min-height: 56px;
+        border-radius: var(--mv-radius-lg);
+        border: 1px solid var(--mv-border);
+        background: var(--mv-surface);
+        font-size: var(--mv-fs-lg);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+        .mv-numpad__key:active {
+            background: var(--mv-surface-sunken);
+            transform: scale(0.96);
+        }
+</style>
+
+@code {
+    private readonly string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "back" };
+
+    [Parameter] public string Value { get; set; } = "0";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public decimal MaxValue { get; set; } = 999_999_999;
+
+    private void Press(string key)
+    {
+        var digits = Value == "0" ? "" : Value;
+        var next = key switch
+        {
+            "back" => digits.Length > 0 ? digits[..^1] : "",
+            _ => digits + key
+        };
+        if (next.Length == 0) next = "0";
+        if (decimal.TryParse(next, out var num) && num > MaxValue) return;
+        Value = next;
+        ValueChanged.InvokeAsync(Value);
+    }
+}

@@ -1,0 +1,42 @@
+﻿<span class="mv-badge mv-badge--@Variant">@ChildContent</span>
+
+<style>
+    .mv-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 9px;
+        border-radius: var(--mv-radius-sm);
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .mv-badge--positive {
+        background: var(--mv-positive-bg);
+        color: var(--mv-positive-text);
+    }
+
+    .mv-badge--danger {
+        background: var(--mv-danger-bg);
+        color: var(--mv-danger-text);
+    }
+
+    .mv-badge--warning {
+        background: var(--mv-warning-bg);
+        color: var(--mv-warning-text);
+    }
+
+    .mv-badge--info {
+        background: var(--mv-info-bg);
+        color: var(--mv-info-text);
+    }
+
+    .mv-badge--neutral {
+        background: var(--mv-surface-sunken);
+        color: var(--mv-text-secondary);
+    }
+</style>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string Variant { get; set; } = "neutral";
+}

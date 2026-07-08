@@ -1,0 +1,42 @@
+@using Monivise.App.State;
+@using Monivise.App.State.Actions
+@page "/login"
+@inject IState<AuthState> AuthState
+@inject IDispatcher Dispatcher
+
+<h1 class="mv-header__title" style="margin-bottom: var(--mv-space-6);">Sign in</h1>
+
+<Input Label="Email" Type="email" InputMode="email" Value="@email" ValueChanged="v => email = v"
+       ErrorMessage="@(fieldErrors.GetValueOrDefault("email"))" />
+<Input Label="Password" Type="password" Value="@password" ValueChanged="v => password = v"
+       ErrorMessage="@(fieldErrors.GetValueOrDefault("password"))" />
+
+@if (!string.IsNullOrWhiteSpace(AuthState.Value.ErrorMessage))
+{
+    <p class="mv-field__error mv-shake" role="alert" style="margin-bottom: var(--mv-space-4);">@AuthState.Value.ErrorMessage</p>
+}
+
+<Button Variant="primary" IsLoading="@AuthState.Value.IsLoading" OnClick="Submit">Sign in</Button>
+
+<p style="text-align:center; font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin-top: var(--mv-space-4);">
+    New here? <a href="/register">Create an account</a>
+</p>
+
+@code {
+    private string email = "";
+    private string password = "";
+    private Dictionary<string, string> fieldErrors = new();
+
+    private void Submit()
+    {
+        fieldErrors.Clear();
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+            fieldErrors["email"] = "Enter a valid email address.";
+        if (string.IsNullOrWhiteSpace(password))
+            fieldErrors["password"] = "Enter your password.";
+
+        if (fieldErrors.Count > 0) return;
+
+        Dispatcher.Dispatch(new LoginAction(email, password));
+    }
+}

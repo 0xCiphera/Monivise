@@ -1,0 +1,11 @@
+﻿<a href="@Href" class="mv-nav__item @(Active ? "active" : "")">
+    <Icon Name="@Icon" Size="20" />
+    <span>@Label</span>
+</a>
+
+@code {
+    [Parameter] public string Href { get; set; } = "#";
+    [Parameter] public string Icon { get; set; } = "home";
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public bool Active { get; set; }
+}

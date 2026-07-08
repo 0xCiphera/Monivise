@@ -47,10 +47,15 @@ builder.Services.AddOpenApi();
 
 // ─── CORS ───
 builder.Services.AddCors(opts => opts.AddPolicy("Dev", policy =>
-    policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:5259")
+    policy.WithOrigins(
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:5259",
+            "https://localhost:7160",
+            "http://localhost:5046")
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials())); // Required for refresh token cookies
+        .AllowCredentials()));
 
 // ─── Build ───
 var app = builder.Build();

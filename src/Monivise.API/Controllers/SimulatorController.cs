@@ -106,6 +106,8 @@ namespace Monivise.API.Controllers
                 Kind = "Expense",
                 Amount = txn.Amount,
                 Note = txn.Note,
+                Source = "Simulator",
+                IncomeType = string.Empty,
                 Date = txn.Date
             });
         }

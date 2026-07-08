@@ -1,34 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Monivise.App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Monivise</title>
     <base href="/" />
-    <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/tokens.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
     <link href="Monivise.App.styles.css" rel="stylesheet" />
-    <script type="importmap"></script>
 </head>
-
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div style="display:flex;align-items:center;justify-content:center;height:100dvh;">
+            <p style="font-size:13px;color:#8b9099;">Loading…</p>
+        </div>
     </div>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
-        <span class="dismiss">🗙</span>
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
     </div>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-</body>
 
+    <script>
+        window.monivise = window.monivise || {};
+        window.monivise.connectivity = {
+            register: function (dotnetRef) {
+                const notify = () => dotnetRef.invokeMethodAsync('OnConnectivityChanged', navigator.onLine);
+                window.addEventListener('online', notify);
+                window.addEventListener('offline', notify);
+                notify();
+            }
+        };
+        window.monivise.theme = {
+            isDark: () => document.documentElement.classList.contains('dark'),
+            set: (dark) => document.documentElement.classList.toggle('dark', dark)
+        };
+    </script>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
 </html>

@@ -1,0 +1,80 @@
+﻿<div class="mv-bucket-row" @onclick="HandleClick">
+    <div class="mv-bucket-row__icon" style="background:@BgTint(Bucket.Type); color:@TextTint(Bucket.Type);">
+        <Icon Name="wallet" Size="18" />
+    </div>
+    <div class="mv-bucket-row__body">
+        <p class="mv-bucket-row__name">@Bucket.Name</p>
+        <p class="mv-bucket-row__meta">@Bucket.Type &middot; @(Bucket.Allocated > 0 ? $"{(Bucket.Spent / Bucket.Allocated * 100):0}% used" : "no allocation")</p>
+    </div>
+    <p class="mv-bucket-row__amount">@Bucket.Balance.ToString("C0")</p>
+</div>
+
+<style>
+    .mv-bucket-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--mv-border);
+        border-radius: var(--mv-radius-md);
+        padding: 10px 12px;
+        cursor: pointer;
+    }
+
+        .mv-bucket-row:active {
+            background: var(--mv-surface-sunken);
+        }
+
+    .mv-bucket-row__icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .mv-bucket-row__body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .mv-bucket-row__name {
+        font-size: var(--mv-fs-md);
+        margin: 0;
+    }
+
+    .mv-bucket-row__meta {
+        font-size: var(--mv-fs-xs);
+        color: var(--mv-text-tertiary);
+        margin: 2px 0 0;
+    }
+
+    .mv-bucket-row__amount {
+        font-size: var(--mv-fs-md);
+        font-weight: 600;
+        margin: 0;
+    }
+</style>
+
+@code {
+    [Parameter] public BucketDto Bucket { get; set; } = default!;
+    [Parameter] public EventCallback<BucketDto> OnSelect { get; set; }
+
+    private Task HandleClick() => OnSelect.HasDelegate ? OnSelect.InvokeAsync(Bucket) : Task.CompletedTask;
+
+    private static string BgTint(string type) => type switch
+    {
+        "HardFixed" or "Fixed" => "var(--mv-bucket-fixed-bg)",
+        "Soft" or "Flexible" => "var(--mv-bucket-flexible-bg)",
+        "Savings" => "var(--mv-bucket-savings-bg)",
+        _ => "var(--mv-bucket-reserve-bg)"
+    };
+    private static string TextTint(string type) => type switch
+    {
+        "HardFixed" or "Fixed" => "var(--mv-bucket-fixed-text)",
+        "Soft" or "Flexible" => "var(--mv-bucket-flexible-text)",
+        "Savings" => "var(--mv-bucket-savings-text)",
+        _ => "var(--mv-bucket-reserve-text)"
+    };
+}

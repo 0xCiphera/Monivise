@@ -1,0 +1,66 @@
+@page "/history"
+@using Monivise.App.Components.Molecules
+@layout AppShell
+@attribute [Authorize]
+@inject TransactionApiClient Api
+@inject IDispatcher Dispatcher
+
+@if (isLoading)
+{
+    <p style="text-align:center; color: var(--mv-text-secondary);">Loading transactions…</p>
+}
+else if (errorMessage is not null)
+{
+    <div class="mv-card" style="text-align:center;">
+        <p class="mv-field__error">@errorMessage</p>
+        <Button Variant="secondary" OnClick="Load">Retry</Button>
+    </div>
+}
+else if (grouped.Count == 0)
+{
+    <div class="mv-card" style="text-align:center; color: var(--mv-text-secondary);">No transactions yet.</div>
+}
+else
+{
+    @foreach (var group in grouped)
+    {
+        <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin: var(--mv-space-4) 0 8px;">@group.Key.ToString("MMMM d")</p>
+        <div class="mv-card">
+            @foreach (var tx in group)
+            {
+                <TransactionRow Tx="tx" />
+            }
+        </div>
+    }
+}
+
+@code {
+    private bool isLoading = true;
+    private string? errorMessage;
+    private List<IGrouping<DateTime, TransactionDto>> grouped = new();
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var txs = await Api.GetCurrentCycleAsync();
+            grouped = txs.GroupBy(t => t.Date.Date).OrderByDescending(g => g.Key).ToList();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Network error. Please check your connection.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

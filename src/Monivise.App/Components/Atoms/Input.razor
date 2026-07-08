@@ -1,0 +1,105 @@
+﻿<div class="mv-field">
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <label class="mv-field__label" for="@id">@Label</label>
+    }
+    <input id="@id"
+           type="@Type"
+           class="mv-field__input @(ShakeError ? "mv-shake" : "") @(HasError ? "mv-field__input--error" : "")"
+           placeholder="@Placeholder"
+           value="@Value"
+           @oninput="HandleInput"
+           inputmode="@InputMode"
+           aria-invalid="@HasError"
+           aria-describedby="@(HasError ? id + "-error" : null)" />
+    @if (HasError)
+    {
+        <p id="@(id)-error" class="mv-field__error" role="alert">@ErrorMessage</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(Help))
+    {
+        <p class="mv-field__help">@Help</p>
+    }
+</div>
+
+<style>
+    .mv-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: var(--mv-space-4);
+    }
+
+    .mv-field__label {
+        font-size: var(--mv-fs-sm);
+        font-weight: 600;
+        color: var(--mv-text-secondary);
+    }
+
+    .mv-field__input {
+        min-height: 48px;
+        padding: 0 var(--mv-space-4);
+        border: 1.5px solid var(--mv-border);
+        border-radius: var(--mv-radius-md);
+        font-size: var(--mv-fs-base);
+        background: var(--mv-surface);
+        color: var(--mv-text-primary);
+        transition: border-color var(--mv-motion-fast), box-shadow var(--mv-motion-fast);
+    }
+
+        .mv-field__input:focus {
+            outline: none;
+            border-color: var(--mv-text-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--mv-text-primary) 10%, transparent);
+        }
+
+    .mv-field__input--error {
+        border-color: var(--mv-danger);
+    }
+
+        .mv-field__input--error:focus {
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--mv-danger) 12%, transparent);
+        }
+
+    .mv-field__error {
+        font-size: var(--mv-fs-xs);
+        color: var(--mv-danger);
+        margin: 0;
+    }
+
+    .mv-field__help {
+        font-size: var(--mv-fs-xs);
+        color: var(--mv-text-tertiary);
+        margin: 0;
+    }
+</style>
+
+@code {
+    private readonly string id = "f_" + Guid.NewGuid().ToString("N")[..8];
+    private bool ShakeError;
+
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public string InputMode { get; set; } = "text";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public string? Help { get; set; }
+
+    private bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
+
+    protected override void OnParametersSet()
+    {
+        if (HasError) { ShakeError = true; _ = ResetShake(); }
+    }
+
+    private async Task ResetShake()
+    {
+        await Task.Delay(350);
+        ShakeError = false;
+    }
+
+    private Task HandleInput(ChangeEventArgs e) =>
+        ValueChanged.InvokeAsync(e.Value?.ToString() ?? "");
+}

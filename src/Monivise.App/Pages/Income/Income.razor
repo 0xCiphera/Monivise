@@ -1,0 +1,83 @@
+@using Monivise.App.State.Actions
+@page "/income"
+@layout AppShell
+@attribute [Authorize]
+@inject IncomeApiClient Api
+@inject TransactionApiClient TxApi
+@inject IDispatcher Dispatcher
+
+<div style="display:flex; gap:8px; margin-bottom: var(--mv-space-4);">
+    <button type="button" class="mv-btn mv-btn--@(isPrimary ? "primary" : "secondary")" style="width:auto; padding:0 16px; min-height:38px;" @onclick="() => isPrimary = true">Primary</button>
+    <button type="button" class="mv-btn mv-btn--@(!isPrimary ? "primary" : "secondary")" style="width:auto; padding:0 16px; min-height:38px;" @onclick="() => isPrimary = false">Extra</button>
+</div>
+
+<p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-3) 0;">@amountInput.ToString("C0")</p>
+<NumPad Value="@amountText" ValueChanged="v => amountText = v" />
+
+<div class="mv-field" style="margin-top: var(--mv-space-4);">
+    <label class="mv-field__label">Source</label>
+    <select class="mv-field__input" @bind="source">
+        <option value="Salary">Salary</option>
+        <option value="Freelance">Freelance</option>
+        <option value="Business">Business</option>
+        <option value="Gift">Gift</option>
+        <option value="Other">Other</option>
+    </select>
+</div>
+
+@if (errorMessage is not null)
+{
+    <p class="mv-field__error mv-shake" role="alert">@errorMessage</p>
+}
+
+<Button Variant="primary" Disabled="@(amountInput <= 0)" IsLoading="isSubmitting" OnClick="Allocate">Allocate income</Button>
+
+@if (results.Count > 0)
+{
+    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 8px;">Allocated to</p>
+    <div class="mv-card">
+        @foreach (var r in results)
+        {
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--mv-border);">
+                <span style="font-size: var(--mv-fs-sm);">@r.BucketName</span>
+                <span style="font-size: var(--mv-fs-sm); font-weight:600;">@r.Amount.ToString("C0")</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool isPrimary = true;
+    private string amountText = "0";
+    private decimal amountInput => decimal.TryParse(amountText, out var v) ? v : 0;
+    private string source = "Salary";
+    private bool isSubmitting;
+    private string? errorMessage;
+    private List<AllocationResult> results = new();
+
+    private async Task Allocate()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        try
+        {
+            results = await Api.AllocateAsync(new AllocateIncomeRequest(amountInput, source, isPrimary));
+            await TxApi.RecordIncomeAsync(new RecordIncomeRequest(amountInput, source, isPrimary));
+            Dispatcher.Dispatch(new ShowSuccessAction("Income allocated."));
+            Dispatcher.Dispatch(new LoadDashboardAction());
+            amountText = "0";
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Network error. Please check your connection.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
