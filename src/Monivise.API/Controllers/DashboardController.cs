@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Monivise.Application.DTOs.Buckets;
 using Monivise.Application.DTOs.Cycles;
 using Monivise.Application.DTOs.Dashboard;
+using Monivise.Application.DTOs.Transactions;
 using Monivise.Application.Interfaces.Repositories;
 using Monivise.Application.Interfaces.Services;
 using Monivise.Domain.Entities;
@@ -73,6 +74,21 @@ namespace Monivise.API.Controllers
                     : 0m,
             }).ToList();
 
+            var transactionDtos = txns.OrderByDescending(t => t.Date).Take(10).Select(t => new TransactionResponseDto
+            {
+                Id = t.Id,
+                BucketId = t.BucketId,
+                BucketName = t.Bucket?.Name ?? string.Empty,
+                BucketIcon = t.Bucket?.Icon ?? string.Empty,
+                BucketColor = t.Bucket?.Color ?? string.Empty,
+                Kind = t.Kind.ToString(),
+                Amount = t.Amount,
+                Note = t.Note,
+                Source = t.Source,
+                IncomeType = t.IncomeType.ToString(),
+                Date = t.Date
+            }).ToList();
+
             return Ok(new DashboardDto
             {
                 SafeToSpend = safeToSpend,
@@ -85,6 +101,7 @@ namespace Monivise.API.Controllers
                 TotalIncome = txns.Where(t => t.Kind == TransactionKind.Income).Sum(t => t.Amount),
                 TotalSpent = txns.Where(t => t.Kind == TransactionKind.Expense).Sum(t => t.Amount),
                 Buckets = bucketDtos,
+                Transactions = transactionDtos,
                 CurrentCycle = new CycleResponseDto
                 {
                     Id = cycle.Id,

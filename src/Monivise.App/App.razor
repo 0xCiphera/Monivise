@@ -1,24 +1,65 @@
-﻿<CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    @{
-                        Nav.NavigateTo("/login", replace: true);
-                    }
-                </NotAuthorized>
-            </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-        </Found>
-        <NotFound>
-            <LayoutView Layout="@typeof(MainLayout)">
-                <p style="padding:24px;">Page not found.</p>
-                <Button Label="Go Home" OnClick='() => Nav.NavigateTo("/dashboard")' />
-            </LayoutView>
-        </NotFound>
-    </Router>
-</CascadingAuthenticationState>
+﻿@using System.Net.Http.Json
+@using Monivise.App.Authentication
+@using Monivise.App.DTOs
+
+@if (!authChecked)
+{
+    <div style="display:flex;align-items:center;justify-content:center;height:100dvh;flex-direction:column;gap:16px;">
+        <div class="loading-spinner"></div>
+    </div>
+}
+else
+{
+    <Fluxor.Blazor.Web.StoreInitializer />
+    <CascadingAuthenticationState>
+        <Router AppAssembly="@typeof(App).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        @{
+                            Nav.NavigateTo("/login", replace: true);
+                        }
+                    </NotAuthorized>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <p style="padding:24px;">Page not found.</p>
+                    <Button Label="Go Home" OnClick='() => Nav.NavigateTo("/dashboard")' />
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </CascadingAuthenticationState>
+}
 
 @code {
     [Inject] private Microsoft.AspNetCore.Components.NavigationManager Nav { get; set; } = default!;
+    [Inject] private IHttpClientFactory Factory { get; set; } = default!;
+    [Inject] private TokenStore TokenStore { get; set; } = default!;
+
+    private bool authChecked;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var raw = Factory.CreateClient("MoniviseRawApi");
+            var response = await raw.PostAsync("api/auth/refresh", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+                if (auth is not null)
+                    TokenStore.Set(auth.AccessToken, auth.ExpiresAt);
+            }
+        }
+        catch
+        {
+            // No valid session cookie — proceed anonymously; AuthorizeRouteView
+            // will route to /login for any protected page as normal.
+        }
+        finally
+        {
+            authChecked = true;
+        }
+    }
 }

@@ -15,8 +15,5 @@ namespace Monivise.Application.DTOs.Auth
 
         [Required, MaxLength(100)]
         public string DisplayName { get; set; } = string.Empty;
-
-        [RegularExpression("^(NGN|USD|GBP)$", ErrorMessage = "Currency must be NGN, USD, or GBP")]
-        public string Currency { get; set; } = "NGN";
     }
 }

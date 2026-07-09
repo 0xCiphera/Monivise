@@ -7,24 +7,24 @@
 
 @if (isLoading)
 {
-    <p style="text-align:center; color: var(--mv-text-secondary);">Loading transactions…</p>
+    <p style="text-align:center; color: var(--mv-text-secondary); padding: var(--mv-space-5) 0;">Loading transactions…</p>
 }
 else if (errorMessage is not null)
 {
     <div class="mv-card" style="text-align:center;">
-        <p class="mv-field__error">@errorMessage</p>
-        <Button Variant="secondary" OnClick="Load">Retry</Button>
+        <p class="mv-field__error" style="margin-bottom: var(--mv-space-3);">@errorMessage</p>
+        <Button Variant="secondary" OnClick="Load" Label="Retry" />
     </div>
 }
 else if (grouped.Count == 0)
 {
-    <div class="mv-card" style="text-align:center; color: var(--mv-text-secondary);">No transactions yet.</div>
+    <div class="mv-card" style="text-align:center; color: var(--mv-text-secondary); padding: var(--mv-space-5);">No transactions yet.</div>
 }
 else
 {
     @foreach (var group in grouped)
     {
-        <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin: var(--mv-space-4) 0 8px;">@group.Key.ToString("MMMM d")</p>
+        <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin: var(--mv-space-4) 0 var(--mv-space-2);">@group.Key.ToString("MMMM d")</p>
         <div class="mv-card">
             @foreach (var tx in group)
             {

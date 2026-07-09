@@ -1,42 +1,58 @@
-@using Monivise.App.State;
-@using Monivise.App.State.Actions
 @page "/login"
-@inject IState<AuthState> AuthState
+@inherits FluxorComponent
+@layout AuthLayout
+@attribute [AllowAnonymous]
+
+@using Monivise.App.DTOs
+@using Monivise.App.State
+@using Monivise.App.State.Actions
+
 @inject IDispatcher Dispatcher
+@inject IState<AuthState> AuthState
 
-<h1 class="mv-header__title" style="margin-bottom: var(--mv-space-6);">Sign in</h1>
+<div class="mv-auth-container">
+    <div class="mv-auth-brand">
+        <h2 style="font-size: var(--mv-fs-xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; color: var(--mv-text-tertiary);">MONIVISE</h2>
+    </div>
 
-<Input Label="Email" Type="email" InputMode="email" Value="@email" ValueChanged="v => email = v"
-       ErrorMessage="@(fieldErrors.GetValueOrDefault("email"))" />
-<Input Label="Password" Type="password" Value="@password" ValueChanged="v => password = v"
-       ErrorMessage="@(fieldErrors.GetValueOrDefault("password"))" />
+    <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 var(--mv-space-2); color: var(--mv-text-primary);">Welcome back</h1>
+    <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary); margin: 0 0 var(--mv-space-7);">Sign in to continue to your dashboard</p>
 
-@if (!string.IsNullOrWhiteSpace(AuthState.Value.ErrorMessage))
-{
-    <p class="mv-field__error mv-shake" role="alert" style="margin-bottom: var(--mv-space-4);">@AuthState.Value.ErrorMessage</p>
-}
+    @if (!string.IsNullOrEmpty(AuthState.Value.ErrorMessage))
+    {
+        <div style="background: var(--mv-danger-bg); color: var(--mv-danger-text); padding: var(--mv-space-3) var(--mv-space-4); border-radius: var(--mv-radius-lg); margin-bottom: var(--mv-space-5); font-size: var(--mv-fs-sm); border-left: 3px solid var(--mv-danger);">
+            <strong style="font-weight: 600;">Error:</strong> @AuthState.Value.ErrorMessage
+        </div>
+    }
 
-<Button Variant="primary" IsLoading="@AuthState.Value.IsLoading" OnClick="Submit">Sign in</Button>
+    <form @onsubmit="HandleLogin" style="display: flex; flex-direction: column; gap: var(--mv-space-5);">
+        <Input Id="email" Label="Email" Type="email" @bind-Value="Email" Placeholder="you@example.com" Disabled="@AuthState.Value.IsLoading" Autocomplete="email" />
+        <Input Id="password" Label="Password" Type="password" @bind-Value="Password" Placeholder="Enter your password" Disabled="@AuthState.Value.IsLoading" Autocomplete="current-password" />
 
-<p style="text-align:center; font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin-top: var(--mv-space-4);">
-    New here? <a href="/register">Create an account</a>
-</p>
+        <Button Variant="primary"
+                Label="@(AuthState.Value.IsLoading ? "Signing in..." : "Sign in")"
+                ButtonType="submit"
+                IsDisabled="@AuthState.Value.IsLoading" />
+    </form>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--mv-space-2); margin-top: var(--mv-space-5); padding-top: var(--mv-space-5); border-top: 1px solid var(--mv-border);">
+        <a href="/forgot-password" style="color: var(--mv-text-secondary); text-decoration: none; font-size: var(--mv-fs-sm);">Forgot password?</a>
+        <span style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary);">
+            New here? <a href="/register" style="color: var(--mv-accent); text-decoration: none; font-weight: 600;">Create account</a>
+        </span>
+    </div>
+</div>
 
 @code {
-    private string email = "";
-    private string password = "";
-    private Dictionary<string, string> fieldErrors = new();
+    private string Email = string.Empty;
+    private string Password = string.Empty;
 
-    private void Submit()
+    private void HandleLogin()
     {
-        fieldErrors.Clear();
-        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
-            fieldErrors["email"] = "Enter a valid email address.";
-        if (string.IsNullOrWhiteSpace(password))
-            fieldErrors["password"] = "Enter your password.";
-
-        if (fieldErrors.Count > 0) return;
-
-        Dispatcher.Dispatch(new LoginAction(email, password));
+        Dispatcher.Dispatch(new LoginAction(Email.Trim(), Password));
+    }
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dispatcher.Dispatch(new ClearAuthErrorAction());
     }
 }

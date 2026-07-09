@@ -13,6 +13,7 @@ namespace Monivise.API.Controllers
     public class OnboardingController(
     IIntakeProfileRepository intakes,
     IBucketRepository buckets,
+    IBudgetCycleRepository cycles,
     IAllocationRecommendationService recommender) : ApiControllerBase
     {
         /// <summary>Save intake + baseline, return 3 pathway previews.</summary>
@@ -64,7 +65,12 @@ namespace Monivise.API.Controllers
                     Enum.Parse<BucketType>(b.Type), b.AllocationPercent, order++), ct);
 
             profile.ChoosePathway(chosen);
+
+            // Create the initial budget cycle for the user
+            profile.ChoosePathway(chosen);
+            await cycles.AddAsync(BudgetCycle.CreateCurrentMonth(UserId), ct);   
             await buckets.SaveChangesAsync(ct);
+            await cycles.SaveChangesAsync(ct);                                  
             await intakes.SaveChangesAsync(ct);
             return Ok(new { message = "Onboarding complete", pathway = dto.Pathway });
         }

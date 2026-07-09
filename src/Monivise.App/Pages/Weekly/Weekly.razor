@@ -8,50 +8,54 @@
 
 @if (isLoading)
 {
-    <p style="text-align:center; color: var(--mv-text-secondary);">Loading your weekly review…</p>
+    <p style="text-align:center; color: var(--mv-text-secondary); padding: var(--mv-space-5) 0;">Loading your weekly review…</p>
 }
 else if (errorMessage is not null)
 {
     <div class="mv-card" style="text-align:center;">
-        <p class="mv-field__error">@errorMessage</p>
-        <Button Variant="secondary" OnClick="Load">Retry</Button>
+        <p class="mv-field__error" style="margin-bottom: var(--mv-space-3);">@errorMessage</p>
+        <Button Variant="secondary" OnClick="Load" Label="Retry" />
     </div>
 }
 else if (review is { } r)
 {
-    <div class="mv-card mv-card--hero">
-        <p class="mv-card__label" style="font-size:12px; margin:0 0 4px;">Projected end-of-cycle balance</p>
-        <p style="font-size: var(--mv-fs-2xl); font-weight:600; margin:0;">@r.ProjectedEndBalance.ToString("C0")</p>
+    @if (r.FixedPrompts.Count > 0)
+    {
+        <p style="font-size: var(--mv-fs-md); font-weight:600; margin:0 0 var(--mv-space-3);">Fixed expenses</p>
+        @foreach (var item in r.FixedPrompts)
+        {
+            <div class="mv-card" style="margin-bottom: var(--mv-space-2);">
+                <p style="font-size: var(--mv-fs-sm); font-weight:600; margin:0 0 var(--mv-space-1);">@item.Name</p>
+                <div style="display:flex; justify-content:space-between; font-size: var(--mv-fs-xs); color: var(--mv-text-secondary);">
+                    <span>Reserved: @CurrencyFormatter.Format(item.Reserved)</span>
+                    <span>Actual: @CurrencyFormatter.Format(item.ActualSpent)</span>
+                </div>
+            </div>
+        }
+    }
+
+    <div class="mv-card mv-card--hero" style="margin-top: var(--mv-space-4);">
+        <p class="mv-card__label" style="font-size: var(--mv-fs-xs); margin:0 0 var(--mv-space-1);">Daily underspend</p>
+        <p style="font-size: var(--mv-fs-2xl); font-weight:600; margin:0;">@CurrencyFormatter.Format(r.DailyUnderspend)</p>
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top: var(--mv-space-3);">
-        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:10px; padding:12px;">
-            <p style="font-size:12px; color:var(--mv-text-tertiary); margin:0;">Daily average</p>
-            <p style="font-size: var(--mv-fs-md); font-weight:600; margin:2px 0 0;">@r.DailyAverage.ToString("C0")</p>
-        </div>
-        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:10px; padding:12px;">
-            <p style="font-size:12px; color:var(--mv-text-tertiary); margin:0;">Pace</p>
-            <p style="font-size: var(--mv-fs-md); font-weight:600; margin:2px 0 0;">@r.PaceLabel</p>
-        </div>
-    </div>
-
-    @if (r.Underspend > 0)
+    @if (r.TotalSurplus > 0)
     {
         <div style="height: var(--mv-space-4);"></div>
         <div class="mv-card" style="text-align:center;">
-            <p style="margin:0 0 4px;">You underspent @r.Underspend.ToString("C0") this week.</p>
+            <p style="margin:0 0 var(--mv-space-1); font-weight: 600;">Total surplus: @CurrencyFormatter.Format(r.TotalSurplus)</p>
             <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:0 0 var(--mv-space-3);">Sweep it into a goal?</p>
-            <Button Variant="primary" OnClick="OpenSweep">Sweep to goal</Button>
+            @if (r.ActiveGoal is not null)
+            {
+                <p style="font-size: var(--mv-fs-sm); margin:0 0 var(--mv-space-2);">@r.ActiveGoal.Name (@r.ActiveGoal.ProgressPercent.ToString("P0"))</p>
+                <Button Variant="primary" OnClick="() => Sweep(r.ActiveGoal.Id)" Label="Sweep to goal" />
+            }
+            else
+            {
+                <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-secondary);">No active goal. Create one first.</p>
+            }
         </div>
     }
-
-    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 8px;">Bucket breakdown</p>
-    <div style="display:flex; flex-direction:column; gap:8px;">
-        @foreach (var bucket in r.BucketBreakdown)
-        {
-            <BucketRow Bucket="bucket" />
-        }
-    </div>
 }
 
 @code {
@@ -83,5 +87,22 @@ else if (review is { } r)
         }
     }
 
-    private void OpenSweep() => Dispatcher.Dispatch(new ShowInfoAction("Pick a goal from Settings to sweep into."));
+    private async Task Sweep(Guid goalId)
+    {
+        if (review is null) return;
+        try
+        {
+            await Api.SweepAsync(new SweepRequest(goalId, review.TotalSurplus, review.FixedPrompts));
+            Dispatcher.Dispatch(new ShowSuccessAction("Surplus swept to goal."));
+            await Load();
+        }
+        catch (ApiException ex)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction(ex.Message));
+        }
+        catch (Exception)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction("Network error. Please check your connection."));
+        }
+    }
 }

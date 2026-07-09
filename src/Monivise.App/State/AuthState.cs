@@ -8,7 +8,6 @@ public record AuthState
     public bool IsAuthenticated { get; init; }
     public bool IsLoading { get; init; }
     public string? DisplayName { get; init; }
-    public string? Currency { get; init; }
     public string? ErrorMessage { get; init; }
 
     private AuthState() { }

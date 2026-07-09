@@ -30,9 +30,6 @@ public class UserController(IUserRepository users) : ApiControllerBase
         if (!string.IsNullOrWhiteSpace(dto.DisplayName))
             user.UpdateDisplayName(dto.DisplayName);
 
-        if (!string.IsNullOrWhiteSpace(dto.Currency))
-            user.UpdateCurrency(dto.Currency);
-
         await users.SaveChangesAsync(ct);
         return Ok(Map(user));
     }
@@ -42,7 +39,6 @@ public class UserController(IUserRepository users) : ApiControllerBase
         Id = u.Id,
         DisplayName = u.DisplayName,
         Email = u.Email,
-        Currency = u.Currency,
         OnboardingComplete = u.OnboardingComplete
     };
 }

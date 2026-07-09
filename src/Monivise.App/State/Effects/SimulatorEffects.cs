@@ -1,7 +1,6 @@
 ﻿using Fluxor;
 using Monivise.App.API;
 using Monivise.App.DTOs;
-using Monivise.App.DTOs.Simulator;
 using Monivise.App.State.Actions;
 
 namespace Monivise.App.State.Effects;

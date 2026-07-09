@@ -5,7 +5,7 @@
         <p class="mv-tx-row__date">@Tx.Date.ToString("MMM d")@(string.IsNullOrWhiteSpace(Tx.Note) ? "" : $" · {Tx.Note}")</p>
     </div>
     <p class="mv-tx-row__amount" style="color:@(Tx.Kind == "Income" ? "var(--mv-positive)" : "var(--mv-text-primary)");">
-        @(Tx.Kind == "Income" ? "+" : "-")@Math.Abs(Tx.Amount).ToString("C0")
+        @(Tx.Kind == "Income" ? "+" : "-")@CurrencyFormatter.Format(Math.Abs(Tx.Amount))
     </p>
 </div>
 

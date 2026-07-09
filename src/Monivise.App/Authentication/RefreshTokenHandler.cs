@@ -1,4 +1,4 @@
-using Monivise.App.DTOs.Auth;
+using Monivise.App.DTOs;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -27,7 +27,11 @@ public class RefreshTokenHandler : DelegatingHandler
 
         var response = await base.SendAsync(request, ct);
 
-        if (response.StatusCode != HttpStatusCode.Unauthorized || _isRefreshing)
+        var path = request.RequestUri?.AbsolutePath ?? "";
+        bool isAuthEndpoint = path.Contains("/api/auth/login") || path.Contains("/api/auth/register") ||
+                              path.Contains("/api/auth/refresh") || path.Contains("/api/auth/logout");
+
+        if (response.StatusCode != HttpStatusCode.Unauthorized || _isRefreshing || isAuthEndpoint)
             return response;
 
         _isRefreshing = true;

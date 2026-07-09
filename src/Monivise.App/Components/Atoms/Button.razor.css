@@ -1,0 +1,92 @@
+.mv-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--mv-space-3) var(--mv-space-4);
+    border: 1.5px solid transparent;
+    border-radius: var(--mv-radius-md);
+    font-family: var(--mv-font-sans);
+    font-size: var(--mv-fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--mv-motion-fast) var(--mv-ease-standard);
+    background: var(--mv-surface);
+    color: var(--mv-text-primary);
+    border-color: var(--mv-border);
+    min-height: 48px;
+    white-space: nowrap;
+    width: 100%;
+}
+
+    .mv-button:hover:not(:disabled) {
+        background: var(--mv-surface-sunken);
+        border-color: var(--mv-border-strong);
+    }
+
+    .mv-button:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+
+    .mv-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+/* Primary Variant */
+.mv-button--primary {
+    background: var(--mv-accent);
+    color: var(--mv-accent-text);
+    border-color: var(--mv-accent);
+}
+
+    .mv-button--primary:hover:not(:disabled) {
+        opacity: 0.92;
+    }
+
+/* Secondary Variant */
+.mv-button--secondary {
+    background: var(--mv-surface);
+    color: var(--mv-text-primary);
+    border-color: var(--mv-border-strong);
+}
+
+    .mv-button--secondary:hover:not(:disabled) {
+        background: var(--mv-surface-sunken);
+    }
+
+/* Ghost Variant */
+.mv-button--ghost {
+    background: transparent;
+    color: var(--mv-text-secondary);
+    border-color: transparent;
+    min-height: auto;
+    padding: var(--mv-space-2);
+    width: auto;
+}
+
+    .mv-button--ghost:hover:not(:disabled) {
+        color: var(--mv-text-primary);
+        background: var(--mv-surface-sunken);
+    }
+
+/* Danger Variant */
+.mv-button--danger {
+    background: var(--mv-danger);
+    color: white;
+    border-color: var(--mv-danger);
+}
+
+    .mv-button--danger:hover:not(:disabled) {
+        opacity: 0.92;
+    }
+
+/* Success Variant */
+.mv-button--success {
+    background: var(--mv-positive);
+    color: white;
+    border-color: var(--mv-positive);
+}
+
+    .mv-button--success:hover:not(:disabled) {
+        opacity: 0.92;
+    }

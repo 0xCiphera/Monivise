@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Components;
 using Monivise.App.API;
 using Monivise.App.Authentication;
 using Monivise.App.State.Actions;
+using System;
+using System.Threading.Tasks;
 
 namespace Monivise.App.State.Effects;
 
@@ -51,7 +53,7 @@ public class AuthEffects
     {
         try
         {
-            var response = await api.RegisterAsync(new(action.DisplayName, action.Email, action.Password, action.Currency));
+            var response = await api.RegisterAsync(new(action.DisplayName, action.Email, action.Password));
             tokenStore.Set(response.AccessToken, response.ExpiresAt);
             dispatcher.Dispatch(new RegisterSuccessAction(response));
             nav.NavigateTo("/onboarding");

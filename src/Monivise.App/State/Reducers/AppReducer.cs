@@ -8,7 +8,7 @@ public static class AppReducer
 {
     [ReducerMethod] public static AppState OnLoadDashboard(AppState s, LoadDashboardAction _) => s with { IsLoading = true };
     [ReducerMethod] public static AppState OnLoadDashboardSuccess(AppState s, LoadDashboardSuccessAction a) =>
-        s with { IsLoading = false, Dashboard = a.Summary, Buckets = a.Summary.Buckets, Transactions = a.Summary.RecentTransactions };
+        s with { IsLoading = false, Dashboard = a.Summary, Buckets = a.Summary.Buckets, Transactions = a.Summary.Transactions };
     [ReducerMethod] public static AppState OnLoadDashboardFailure(AppState s, LoadDashboardFailureAction _) => s with { IsLoading = false };
     [ReducerMethod] public static AppState OnShowSuccess(AppState s, ShowSuccessAction a) => s with { Messages = Append(s.Messages, a.Message, "success") };
     [ReducerMethod] public static AppState OnShowError(AppState s, ShowErrorAction a) => s with { Messages = Append(s.Messages, a.Message, "error") };

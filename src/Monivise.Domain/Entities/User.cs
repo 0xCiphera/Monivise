@@ -11,7 +11,6 @@ namespace Monivise.Domain.Entities
         public string Email { get; private set; } = string.Empty;
         public string PasswordHash { get; private set; } = string.Empty;
         public string DisplayName { get; private set; } = string.Empty;
-        public string Currency { get; private set; } = "NGN";
         public bool OnboardingComplete { get; private set; } = false;
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
@@ -26,7 +25,7 @@ namespace Monivise.Domain.Entities
 
         protected User() { }
 
-        public static User Create(string email, string passwordHash, string displayName, string currency = "NGN")
+        public static User Create(string email, string passwordHash, string displayName)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(email);
             ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
@@ -36,14 +35,12 @@ namespace Monivise.Domain.Entities
             {
                 Email = email.ToLowerInvariant().Trim(),
                 PasswordHash = passwordHash,
-                DisplayName = displayName.Trim(),
-                Currency = currency
+                DisplayName = displayName.Trim()
             };
         }
 
         public void CompleteOnboarding() => OnboardingComplete = true;
         public void UpdateDisplayName(string name) { DisplayName = name.Trim(); Touch(); }
-        public void UpdateCurrency(string currency) { Currency = currency; Touch(); }
 
         public void SetRefreshToken(string token, DateTime expiresAt)
         {

@@ -6,7 +6,7 @@
         <p class="mv-bucket-row__name">@Bucket.Name</p>
         <p class="mv-bucket-row__meta">@Bucket.Type &middot; @(Bucket.Allocated > 0 ? $"{(Bucket.Spent / Bucket.Allocated * 100):0}% used" : "no allocation")</p>
     </div>
-    <p class="mv-bucket-row__amount">@Bucket.Balance.ToString("C0")</p>
+    <p class="mv-bucket-row__amount">@CurrencyFormatter.Format(Bucket.Balance)</p>
 </div>
 
 <style>

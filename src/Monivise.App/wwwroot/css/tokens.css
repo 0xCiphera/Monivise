@@ -70,46 +70,43 @@
     --mv-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-    :root.dark {
-        --mv-bg: #0d1117;
-        --mv-surface: #161b22;
-        --mv-surface-sunken: #10141a;
-        --mv-surface-inverted: #f6f7f9;
-        --mv-border: #262c36;
-        --mv-border-strong: #333a46;
-        --mv-text-primary: #e6e8eb;
-        --mv-text-secondary: #9aa1ac;
-        --mv-text-tertiary: #6b7280;
-        --mv-text-inverted: #16181d;
-        --mv-accent: #e6e8eb;
-        --mv-accent-text: #16181d;
-        --mv-positive: #3fb950;
-        --mv-positive-bg: #0f2c22;
-        --mv-positive-text: #6fdba0;
-        --mv-danger: #f85149;
-        --mv-danger-bg: #2d1416;
-        --mv-danger-text: #ff8f88;
-        --mv-warning: #d29922;
-        --mv-warning-bg: #2b2210;
-        --mv-warning-text: #e3b341;
-        --mv-info: #58a6ff;
-        --mv-info-bg: #101d2c;
-        --mv-info-text: #79b8ff;
-        --mv-bucket-fixed-bg: #10233a;
-        --mv-bucket-fixed-text: #79b8ff;
-        --mv-bucket-flexible-bg: #0f2c22;
-        --mv-bucket-flexible-text: #6fdba0;
-        --mv-bucket-savings-bg: #1c2a10;
-        --mv-bucket-savings-text: #a3d977;
-        --mv-bucket-reserve-bg: #1c1f26;
-        --mv-bucket-reserve-text: #b4b8c2;
+
+/* Dark mode */
+@media (prefers-color-scheme: dark)
+{
+    html.dark {
+        :root {
+            --mv-bg: #0f1117;
+            --mv-surface: #16181d;
+            --mv-surface-sunken: #21262d;
+            --mv-surface-inverted: #f6f7f9;
+            --mv-border: #30363d;
+            --mv-border-strong: #484f58;
+            --mv-text-primary: #e6edf3;
+            --mv-text-secondary: #8b949e;
+            --mv-text-tertiary: #6e7681;
+            --mv-text-inverted: #0f1117;
+            --mv-accent: #58a6ff;
+            --mv-accent-text: #0f1117;
+            --mv-positive: #3fb950;
+            --mv-positive-bg: #0d3922;
+            --mv-positive-text: #56d364;
+            --mv-danger: #f85149;
+            --mv-danger-bg: #3d2817;
+            --mv-danger-text: #ff7b72;
+            --mv-warning: #d29922;
+            --mv-warning-bg: #3d2817;
+            --mv-warning-text: #e3b341;
+        }
     }
 
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+} 
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
     }
-}

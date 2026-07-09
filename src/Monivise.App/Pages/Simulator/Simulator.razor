@@ -12,7 +12,7 @@
 @if (AppState.Value.SimulatorBucketId is null)
 {
     <p style="font-size: var(--mv-fs-lg); font-weight:600; margin:0 0 var(--mv-space-4);">Which bucket?</p>
-    <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="display:flex; flex-direction:column; gap: var(--mv-space-2);">
         @foreach (var bucket in AppState.Value.Buckets)
         {
             <BucketRow Bucket="bucket" OnSelect="SelectBucket" />
@@ -22,17 +22,17 @@
 else
 {
     var bucket = AppState.Value.Buckets.FirstOrDefault(b => b.Id == AppState.Value.SimulatorBucketId);
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom: var(--mv-space-4);">
-        <Button Variant="ghost" OnClick="() => Dispatcher.Dispatch(new ClearSimulatorAction())">&larr; Back</Button>
+    <div style="display:flex; align-items:center; gap: var(--mv-space-2); margin-bottom: var(--mv-space-4);">
+        <Button Variant="ghost" OnClick="() => Dispatcher.Dispatch(new ClearSimulatorAction())" Label="← Back" />
     </div>
     <p style="font-size: var(--mv-fs-md); font-weight:600; margin:0;">@bucket?.Name</p>
-    <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:2px 0 var(--mv-space-4);">Balance: @(bucket?.Balance.ToString("C0")) left</p>
+    <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin: var(--mv-space-1) 0 var(--mv-space-4);">Balance: @(bucket is null ? "" : CurrencyFormatter.Format(bucket.Balance)) left</p>
 
-    <p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-3) 0;">@amountInput.ToString("C0")</p>
+    <p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-4);">@CurrencyFormatter.Format(amountInput)</p>
     <NumPad Value="@amountText" ValueChanged="OnAmountChanged" />
 
     <div style="height: var(--mv-space-4);"></div>
-    <Button Variant="secondary" Disabled="@(amountInput <= 0)" IsLoading="@AppState.Value.SimulatorIsLoading" OnClick="Preview">See consequence</Button>
+    <Button Variant="secondary" IsDisabled="@(amountInput <= 0)" IsLoading="@AppState.Value.SimulatorIsLoading" OnClick="Preview" Label="See consequence" />
 
     @if (AppState.Value.SimulatorError is not null)
     {
@@ -48,9 +48,9 @@ else
         <div style="height: var(--mv-space-3);"></div>
         <ConsequenceCard Preview="preview" />
         <div style="height: var(--mv-space-4);"></div>
-        <div style="display:flex; gap:10px;">
-            <Button Variant="secondary" OnClick="() => Dispatcher.Dispatch(new ClearSimulatorAction())">Cancel</Button>
-            <Button Variant="@(preview.CanAfford ? "primary" : "danger")" OnClick="Commit">Approve</Button>
+        <div style="display:flex; gap: var(--mv-space-2);">
+            <Button Variant="secondary" OnClick="() => Dispatcher.Dispatch(new ClearSimulatorAction())" Label="Cancel" />
+            <Button Variant="@(preview.CanAfford ? "primary" : "danger")" OnClick="Commit" Label="Approve" />
         </div>
     }
 }

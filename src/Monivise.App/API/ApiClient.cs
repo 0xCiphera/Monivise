@@ -16,6 +16,11 @@ public class ApiClient
         await EnsureSuccessOrThrowAsync(response);
         return await DeserializeAsync<T>(response);
     }
+    protected async Task PostAsync(string url, object? body = null)
+    {
+        var response = await SendWithNetworkGuard(() => Http.PostAsJsonAsync(url, body, JsonOptions));
+        await EnsureSuccessOrThrowAsync(response);
+    }
 
     protected async Task<T> PostAsync<T>(string url, object? body = null)
     {
@@ -24,9 +29,21 @@ public class ApiClient
         return await DeserializeAsync<T>(response);
     }
 
-    protected async Task PostAsync(string url, object? body = null)
+    protected async Task PutAsync(string url, object? body = null)
     {
-        var response = await SendWithNetworkGuard(() => Http.PostAsJsonAsync(url, body, JsonOptions));
+        var response = await SendWithNetworkGuard(() => Http.PutAsJsonAsync(url, body, JsonOptions));
+        await EnsureSuccessOrThrowAsync(response);
+    }
+    protected async Task<T> PutAsync<T>(string url, object? body = null)
+    {
+        var response = await SendWithNetworkGuard(() => Http.PutAsJsonAsync(url, body, JsonOptions));
+        await EnsureSuccessOrThrowAsync(response);
+        return await DeserializeAsync<T>(response);
+    }
+
+    protected async Task DeleteAsync(string url)
+    {
+        var response = await SendWithNetworkGuard(() => Http.DeleteAsync(url));
         await EnsureSuccessOrThrowAsync(response);
     }
 

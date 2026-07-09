@@ -1,57 +1,69 @@
-@using Monivise.App.State;
-@using Monivise.App.State.Actions;
 @page "/register"
-@inject IState<AuthState> AuthState
+@inherits FluxorComponent
+@layout AuthLayout
+@attribute [AllowAnonymous]
+
+@using Monivise.App.State
+@using Monivise.App.State.Actions
+
 @inject IDispatcher Dispatcher
+@inject IState<AuthState> AuthState
 
-<h1 class="mv-header__title" style="margin-bottom: var(--mv-space-6);">Create your account</h1>
+<div class="mv-auth-container">
+    <div class="mv-auth-brand">
+        <h2 style="font-size: var(--mv-fs-xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; color: var(--mv-text-tertiary);">MONIVISE</h2>
+    </div>
 
-<Input Label="Display name" Value="@displayName" ValueChanged="v => displayName = v"
-       ErrorMessage="@(fieldErrors.GetValueOrDefault("displayName"))" />
-<Input Label="Email" Type="email" InputMode="email" Value="@email" ValueChanged="v => email = v"
-       ErrorMessage="@(fieldErrors.GetValueOrDefault("email"))" />
-<Input Label="Password" Type="password" Value="@password" ValueChanged="v => password = v"
-       Help="At least 8 characters." ErrorMessage="@(fieldErrors.GetValueOrDefault("password"))" />
+    <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 var(--mv-space-2); color: var(--mv-text-primary);">Create your account</h1>
+    <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary); margin: 0 0 var(--mv-space-7);">Get started with smarter budgeting today</p>
 
-<div class="mv-field">
-    <label class="mv-field__label">Currency</label>
-    <select class="mv-field__input" @bind="currency">
-        <option value="NGN">NGN — Nigerian Naira</option>
-        <option value="USD">USD — US Dollar</option>
-        <option value="GBP">GBP — British Pound</option>
-    </select>
+    @if (!string.IsNullOrEmpty(AuthState.Value.ErrorMessage))
+    {
+        <div style="background: var(--mv-danger-bg); color: var(--mv-danger-text); padding: var(--mv-space-3) var(--mv-space-4); border-radius: var(--mv-radius-lg); margin-bottom: var(--mv-space-5); font-size: var(--mv-fs-sm); border-left: 3px solid var(--mv-danger);">
+            <strong style="font-weight: 600;">Error:</strong> @AuthState.Value.ErrorMessage
+        </div>
+    }
+
+    <form @onsubmit="HandleRegister" style="display: flex; flex-direction: column; gap: var(--mv-space-5);">
+        <Input Id="display-name" Label="Display name" @bind-Value="DisplayName" Placeholder="John Doe" Disabled="@AuthState.Value.IsLoading" Autocomplete="name" />
+        <Input Id="email" Label="Email address" Type="email" @bind-Value="Email" Placeholder="you@example.com" Disabled="@AuthState.Value.IsLoading" Autocomplete="email" />
+        <Input Id="password" Label="Password" Type="password" @bind-Value="Password" Placeholder="Min. 8 characters" Disabled="@AuthState.Value.IsLoading" Autocomplete="new-password" ErrorMessage="@(showPasswordError ? "Password must be at least 8 characters." : null)" />
+        <Input Id="confirm-password" Label="Confirm password" Type="password" @bind-Value="ConfirmPassword" Placeholder="Re-enter your password" Disabled="@AuthState.Value.IsLoading" Autocomplete="new-password" ErrorMessage="@(showMismatchError ? "Passwords don't match." : null)" />
+
+        <Button Variant="primary"
+                Label="@(AuthState.Value.IsLoading ? "Creating account..." : "Create account")"
+                ButtonType="submit"
+                IsDisabled="@AuthState.Value.IsLoading" />
+    </form>
+
+    <div style="text-align: center; margin-top: var(--mv-space-5); padding-top: var(--mv-space-5); border-top: 1px solid var(--mv-border);">
+        <span style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary);">
+            Already have an account? <a href="/login" style="color: var(--mv-accent); text-decoration: none; font-weight: 600;">Sign in</a>
+        </span>
+    </div>
 </div>
 
-@if (!string.IsNullOrWhiteSpace(AuthState.Value.ErrorMessage))
-{
-    <p class="mv-field__error mv-shake" role="alert" style="margin-bottom: var(--mv-space-4);">@AuthState.Value.ErrorMessage</p>
-}
-
-<Button Variant="primary" IsLoading="@AuthState.Value.IsLoading" OnClick="Submit">Create account</Button>
-
-<p style="text-align:center; font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin-top: var(--mv-space-4);">
-    Already have an account? <a href="/login">Sign in</a>
-</p>
-
 @code {
-    private string displayName = "";
-    private string email = "";
-    private string password = "";
-    private string currency = "NGN";
-    private Dictionary<string, string> fieldErrors = new();
+    private string DisplayName = string.Empty;
+    private string Email = string.Empty;
+    private string Password = string.Empty;
+    private string ConfirmPassword = string.Empty;
+    private bool showPasswordError;
+    private bool showMismatchError;
 
-    private void Submit()
+    private void HandleRegister()
     {
-        fieldErrors.Clear();
-        if (string.IsNullOrWhiteSpace(displayName))
-            fieldErrors["displayName"] = "Enter your name.";
-        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
-            fieldErrors["email"] = "Enter a valid email address.";
-        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
-            fieldErrors["password"] = "Password must be at least 8 characters.";
+        showPasswordError = Password.Length < 8;
+        showMismatchError = Password != ConfirmPassword;
 
-        if (fieldErrors.Count > 0) return;
+        if (string.IsNullOrWhiteSpace(DisplayName) || string.IsNullOrWhiteSpace(Email) || showPasswordError || showMismatchError)
+            return;
 
-        Dispatcher.Dispatch(new RegisterAction(displayName, email, password, currency));
+        Dispatcher.Dispatch(new RegisterAction(DisplayName.Trim(), Email.Trim(), Password));
+    }
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dispatcher.Dispatch(new ClearAuthErrorAction());
     }
 }

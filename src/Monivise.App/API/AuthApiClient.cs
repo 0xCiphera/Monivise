@@ -1,5 +1,4 @@
 using Monivise.App.DTOs;
-using Monivise.App.DTOs.Auth;
 
 namespace Monivise.App.API;
 

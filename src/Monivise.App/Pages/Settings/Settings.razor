@@ -1,35 +1,40 @@
 @using Monivise.App.State.Actions;
+@using Monivise.App.API;
+@using Monivise.App.DTOs;
 @page "/settings"
 @layout AppShell
 @attribute [Authorize]
 @inject IDispatcher Dispatcher
+@inject UserApiClient UserApi
 
 <p style="font-size:var(--mv-fs-sm);font-weight:600;color:var(--mv-text-secondary);margin:0 0 var(--mv-space-4);">Settings</p>
 
-<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:var(--mv-space-6);">
+@if (profile is not null)
+{
+    <div class="mv-card" style="margin-bottom: var(--mv-space-4);">
+        <p style="font-weight:600; margin:0 0 4px;">@profile.DisplayName</p>
+        <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin:0;">@profile.Email</p>
+    </div>
+}
+
+<div style="display:flex;flex-direction:column;gap:var(--mv-space-2);margin-bottom:var(--mv-space-6);">
     <div class="mv-card" style="cursor:pointer;" @onclick="() => showLogoutConfirm = true">
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:var(--mv-fs-md);">Log out</span>
             <span style="color:var(--mv-text-tertiary);">&rarr;</span>
         </div>
     </div>
-    <div class="mv-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:var(--mv-fs-md);">Dark mode</span>
-            <span style="color:var(--mv-accent);font-size:var(--mv-fs-xs);font-weight:700;">Always on</span>
-        </div>
-    </div>
 </div>
 
 @if (showLogoutConfirm)
 {
-    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:40;">
-        <div class="mv-card mv-scale-in" style="width:80%;background:var(--mv-surface);">
-            <p style="font-weight:600;margin:0 0 4px;">Log out?</p>
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:var(--mv-space-4);">
+        <div class="mv-card mv-scale-in" style="width:100%;max-width:360px;background:var(--mv-surface);">
+            <p style="font-weight:600;margin:0 0 var(--mv-space-1);font-size:var(--mv-fs-lg);">Log out?</p>
             <p style="font-size:var(--mv-fs-sm);color:var(--mv-text-secondary);margin:0 0 var(--mv-space-4);">You'll need to sign in again.</p>
-            <div style="display:flex;gap:10px;">
-                <Button Variant="secondary" OnClick="() => showLogoutConfirm = false">Cancel</Button>
-                <Button Variant="danger" OnClick="ConfirmLogout">Log out</Button>
+            <div style="display:flex;gap:var(--mv-space-2);">
+                <Button Variant="secondary" OnClick="() => showLogoutConfirm = false" Label="Cancel" />
+                <Button Variant="danger" OnClick="ConfirmLogout" Label="Log out" />
             </div>
         </div>
     </div>
@@ -37,6 +42,13 @@
 
 @code {
     private bool showLogoutConfirm;
+    private UserProfileDto? profile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { profile = await UserApi.GetProfileAsync(); }
+        catch (ApiException) { }
+    }
 
     private void ConfirmLogout()
     {

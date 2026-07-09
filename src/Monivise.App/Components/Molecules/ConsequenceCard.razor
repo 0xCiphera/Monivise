@@ -2,11 +2,11 @@
     <div class="mv-consequence__grid">
         <div>
             <p class="mv-consequence__label">Before</p>
-            <p class="mv-consequence__value">@Preview.CurrentBalance.ToString("C0")</p>
+            <p class="mv-consequence__value">@CurrencyFormatter.Format(Preview.CurrentBalance)</p>
         </div>
         <div>
             <p class="mv-consequence__label">After</p>
-            <p class="mv-consequence__value" style="color:@DeltaColor;">@Preview.PostSpendBalance.ToString("C0")</p>
+            <p class="mv-consequence__value" style="@afterStyle">@CurrencyFormatter.Format(Preview.PostSpendBalance)</p>
         </div>
     </div>
     <ProgressBar Percent="@remainingPercent" Color="@DeltaColor" Height="5" />
@@ -67,4 +67,6 @@
     private string DeltaColor => Preview.CanAfford
         ? (Preview.PaceScore >= 0.7m ? "var(--mv-warning)" : "var(--mv-positive)")
         : "var(--mv-danger)";
+
+    private string afterStyle => $"color:{DeltaColor};";
 }

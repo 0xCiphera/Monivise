@@ -15,38 +15,43 @@
 
 @if (isLoading)
 {
-    <p style="text-align:center;color:var(--mv-text-secondary);">Loading goals…</p>
+    <p style="text-align:center;color:var(--mv-text-secondary);padding:var(--mv-space-5) 0;">Loading goals…</p>
 }
 else if (errorMessage is not null)
 {
     <div class="mv-card" style="text-align:center;">
-        <p class="mv-field__error">@errorMessage</p>
-        <Button Variant="secondary" OnClick="Load">Retry</Button>
+        <p class="mv-field__error" style="margin-bottom:var(--mv-space-3);">@errorMessage</p>
+        <Button Variant="secondary" OnClick="Load" Label="Retry" />
     </div>
 }
 else if (goals.Count == 0)
 {
-    <div class="mv-card" style="text-align:center;color:var(--mv-text-secondary);">No goals yet. Tap + to add one.</div>
+    <div class="mv-card" style="text-align:center;color:var(--mv-text-secondary);padding:var(--mv-space-5);">No goals yet. Tap + to add one.</div>
 }
 else
 {
-    <div style="display:flex;flex-direction:column;gap:10px;">
+    <div style="display:flex;flex-direction:column;gap:var(--mv-space-3);">
         @foreach (var g in goals)
         {
             var percent = g.TargetAmount > 0 ? (double)(g.CurrentAmount / g.TargetAmount * 100) : 0;
+            var isActive = g.Status == "Active";
             <div class="mv-card">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                    <span style="font-size:var(--mv-fs-md);font-weight:600;">@g.Name</span>
-                    <Badge Variant="@(g.IsActive ? "positive" : "neutral")">@(g.IsActive ? "Active" : "Inactive")</Badge>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--mv-space-2);">
+                    <span style="font-size:32px;margin-right:var(--mv-space-2);">@g.Icon</span>
+                    <div style="flex:1;">
+                        <span style="font-size:var(--mv-fs-md);font-weight:600;">@g.Name</span>
+                    </div>
+                    <Badge Variant="@(isActive ? "positive" : "neutral")">@g.Status</Badge>
                 </div>
                 <ProgressBar Percent="percent" Height="5" />
-                <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:var(--mv-fs-xs);color:var(--mv-text-tertiary);">
-                    <span>@g.CurrentAmount.ToString("C0") / @g.TargetAmount.ToString("C0")</span>
+                <div style="display:flex;justify-content:space-between;margin-top:var(--mv-space-2);font-size:var(--mv-fs-xs);color:var(--mv-text-tertiary);">
+                    <span>@CurrencyFormatter.Format(g.CurrentAmount) / @CurrencyFormatter.Format(g.TargetAmount)</span>
+                    <span>@g.ProgressPercent.ToString("F0")%</span>
                 </div>
-                @if (!g.IsActive)
+                @if (!isActive)
                 {
                     <div style="margin-top:var(--mv-space-3);">
-                        <Button Variant="secondary" OnClick="() => Activate(g.Id)">Set active</Button>
+                        <Button Variant="secondary" OnClick="() => Activate(g.Id)" Label="Set active" />
                     </div>
                 }
             </div>
@@ -56,18 +61,19 @@ else
 
 @if (showCreate)
 {
-    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:40;">
-        <div class="mv-card mv-scale-in" style="width:80%;background:var(--mv-surface);">
-            <p style="font-weight:600;margin:0 0 var(--mv-space-4);">New goal</p>
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:var(--mv-space-4);">
+        <div class="mv-card mv-scale-in" style="width:100%;max-width:360px;background:var(--mv-surface);">
+            <p style="font-weight:600;margin:0 0 var(--mv-space-4);font-size:var(--mv-fs-lg);">New goal</p>
+            <Input Label="Icon (emoji)" Value="@icon" ValueChanged="v => icon = v" />
             <Input Label="Name" Value="@name" ValueChanged="v => name = v" ErrorMessage="@nameError" />
             <Input Label="Target amount" Type="number" InputMode="decimal" Value="@targetText" ValueChanged="v => targetText = v" ErrorMessage="@targetError" />
             @if (createError is not null)
             {
-                <p class="mv-field__error mv-shake" role="alert">@createError</p>
+                <p class="mv-field__error mv-shake" role="alert" style="margin-top:var(--mv-space-3);">@createError</p>
             }
-            <div style="display:flex;gap:10px;margin-top:var(--mv-space-3);">
-                <Button Variant="secondary" OnClick="() => showCreate = false">Cancel</Button>
-                <Button Variant="primary" IsLoading="isCreating" OnClick="Create">Create</Button>
+            <div style="display:flex;gap:var(--mv-space-2);margin-top:var(--mv-space-4);">
+                <Button Variant="secondary" OnClick="() => showCreate = false" Label="Cancel" />
+                <Button Variant="primary" IsLoading="isCreating" OnClick="Create" Label="Create" />
             </div>
         </div>
     </div>
@@ -81,6 +87,7 @@ else
     private bool showCreate;
     private bool isCreating;
     private string name = "";
+    private string icon = "🎯";
     private string targetText = "";
     private string? nameError;
     private string? targetError;
@@ -120,9 +127,10 @@ else
         createError = null;
         try
         {
-            await Api.CreateAsync(new CreateGoalRequest(name, target));
+            await Api.CreateAsync(new CreateGoalRequest(name, icon, target));
             showCreate = false;
             name = "";
+            icon = "🎯";
             targetText = "";
             await Load();
         }

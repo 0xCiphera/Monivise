@@ -1,11 +1,12 @@
-﻿<button type="@Type"
-        class="mv-btn mv-btn--@Variant"
-        disabled="@(Disabled || IsLoading)"
-        @onclick="HandleClick">
-    @if (IsLoading)
+﻿@namespace Monivise.App.Components.Atoms
+
+<button class="mv-button mv-button--@Variant"
+        @onclick="OnClick"
+        disabled="@IsDisabled"
+        type="@ButtonType">
+    @if (!string.IsNullOrEmpty(Label))
     {
-        <span class="mv-btn__spinner" aria-hidden="true"></span>
-        <span class="mv-sr-only">Loading</span>
+        <span>@Label</span>
     }
     else
     {
@@ -13,75 +14,17 @@
     }
 </button>
 
-<style>
-    .mv-btn {
-        width: 100%;
-        min-height: 48px;
-        border-radius: var(--mv-radius-lg);
-        font-size: var(--mv-fs-base);
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        transition: transform var(--mv-motion-fast) var(--mv-ease-standard), opacity var(--mv-motion-fast);
-        border: 1.5px solid transparent;
-    }
-
-        .mv-btn:active:not(:disabled) {
-            transform: scale(0.97);
-        }
-
-        .mv-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-    .mv-btn--primary {
-        background: var(--mv-accent);
-        color: var(--mv-accent-text);
-    }
-
-    .mv-btn--secondary {
-        background: transparent;
-        border-color: var(--mv-border-strong);
-        color: var(--mv-text-primary);
-    }
-
-    .mv-btn--ghost {
-        background: transparent;
-        color: var(--mv-text-secondary);
-    }
-
-    .mv-btn--danger {
-        background: var(--mv-danger);
-        color: #fff;
-    }
-
-    .mv-btn__spinner {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
-        border-top-color: currentColor;
-        animation: mv-spin 0.7s linear infinite;
-    }
-
-    @@keyframes mv-spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-</style>
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public string Variant { get; set; } = "primary"; // primary | secondary | ghost | danger
-    [Parameter] public string Type { get; set; } = "button";
-    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool IsDisabled { get; set; }
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string ButtonType { get; set; } = "button";
+    [Parameter] public string? Label { get; set; }
+
+
 
     private Task HandleClick() => OnClick.HasDelegate ? OnClick.InvokeAsync() : Task.CompletedTask;
 }

@@ -1,26 +1,81 @@
 @using Monivise.App.Components.Molecules
 @using Monivise.App.State;
+@using Monivise.App.API;
+@using Monivise.App.DTOs;
 @page "/buckets"
 @layout AppShell
 @attribute [Authorize]
 @inject IState<AppState> AppState
 @inject NavigationManager Nav
+@inject BucketApiClient Api
+@inject IDispatcher Dispatcher
 
 <HintBox>Allocations are set by your chosen pathway. Re-run onboarding to change them.</HintBox>
 <div style="height: var(--mv-space-4);"></div>
 
 @if (AppState.Value.Buckets.Count == 0)
 {
-    <div class="mv-card" style="text-align:center; color: var(--mv-text-secondary);">No buckets yet.</div>
+    <div class="mv-card" style="text-align:center; color: var(--mv-text-secondary); padding: var(--mv-space-5);">No buckets yet.</div>
 }
 else
 {
-    <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="display:flex; flex-direction:column; gap: var(--mv-space-2);">
         @foreach (var bucket in AppState.Value.Buckets)
         {
-            <BucketRow Bucket="bucket" OnSelect='b => Nav.NavigateTo($"/simulator?bucket={b.Id}")' />
-            <ProgressBar Percent="@(bucket.Allocated > 0 ? (double)(bucket.Spent / bucket.Allocated * 100) : 0)"
-                         Color="@(bucket.Spent > bucket.Allocated ? "var(--mv-danger)" : "var(--mv-positive)")" />
+            <div style="display:flex; align-items:center; gap: var(--mv-space-2);">
+                <div style="flex:1;">
+                    <BucketRow Bucket="bucket" OnSelect='b => Nav.NavigateTo($"/simulator?bucket={b.Id}")' />
+                    <ProgressBar Percent="@(bucket.Allocated > 0 ? (double)(bucket.Spent / bucket.Allocated * 100) : 0)"
+                                 Color="@(bucket.Spent > bucket.Allocated ? "var(--mv-danger)" : "var(--mv-positive)")" />
+                </div>
+                <Button Variant="ghost" OnClick="() => StartEdit(bucket)" Label="Edit" />
+            </div>
         }
     </div>
+}
+
+@if (editing is not null)
+{
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:var(--mv-space-4);">
+        <div class="mv-card mv-scale-in" style="width:100%;max-width:360px;background:var(--mv-surface);">
+            <p style="font-weight:600;margin:0 0 var(--mv-space-3);font-size:var(--mv-fs-lg);">Edit bucket</p>
+            <Input Label="Name" @bind-Value="editName" />
+            <Input Label="Icon" @bind-Value="editIcon" />
+            <Input Label="Color" @bind-Value="editColor" />
+            <div style="display:flex;gap:var(--mv-space-2); margin-top: var(--mv-space-4);">
+                <Button Variant="secondary" OnClick="() => editing = null" Label="Cancel" />
+                <Button Variant="primary" OnClick="SaveEdit" Label="Save" />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private BucketDto? editing;
+    private string editName = "";
+    private string editIcon = "";
+    private string editColor = "";
+
+    private void StartEdit(BucketDto b)
+    {
+        editing = b;
+        editName = b.Name;
+        editIcon = b.Icon;
+        editColor = b.Color;
+    }
+
+    private async Task SaveEdit()
+    {
+        if (editing is null) return;
+        try
+        {
+            await Api.UpdateAsync(editing.Id, new UpdateBucketRequest(editName, editIcon, editColor));
+            Dispatcher.Dispatch(new Monivise.App.State.Actions.LoadDashboardAction());
+            editing = null;
+        }
+        catch (ApiException ex)
+        {
+            Dispatcher.Dispatch(new Monivise.App.State.Actions.ShowErrorAction(ex.Message));
+        }
+    }
 }

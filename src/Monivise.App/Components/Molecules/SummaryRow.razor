@@ -1,0 +1,13 @@
+﻿<div style="display:flex; justify-content:space-between; align-items:center; background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3) var(--mv-space-4);">
+    <div>
+        <p style="margin:0; font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary);">@Label</p>
+        <p style="margin:2px 0 0; font-size: var(--mv-fs-sm); font-weight:600;">@Value</p>
+    </div>
+    <button type="button" @onclick="OnEdit" style="background:none; border:none; color: var(--mv-accent); font-size: var(--mv-fs-sm); font-weight:600; cursor:pointer;">Change</button>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback OnEdit { get; set; }
+}
