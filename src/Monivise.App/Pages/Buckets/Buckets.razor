@@ -1,8 +1,5 @@
-@using Monivise.App.Components.Molecules
-@using Monivise.App.State;
-@using Monivise.App.API;
-@using Monivise.App.DTOs;
 @page "/buckets"
+@inherits FluxorComponent
 @layout AppShell
 @attribute [Authorize]
 @inject IState<AppState> AppState

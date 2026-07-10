@@ -1,9 +1,5 @@
-@using Monivise.App.Components.Molecules
-@using Monivise.App.State;
-@using Monivise.App.State.Actions;
-@using Fluxor.Blazor.Web.Components
-
 @page "/dashboard"
+@layout AppShell
 @attribute [Authorize]
 @inherits FluxorComponent
 @inject IState<AppState> AppState

@@ -1,8 +1,5 @@
-@using Monivise.App.Components.Molecules;
-@using Monivise.App.State;
-@using Monivise.App.State.Actions;
-
 @page "/simulator"
+@inherits FluxorComponent
 @layout AppShell
 @attribute [Authorize]
 @inject IState<AppState> AppState
@@ -61,6 +58,7 @@ else
 
     protected override void OnInitialized()
     {
+        base.OnInitialized();
         var uri = new Uri(Nav.Uri);
         var rawQuery = uri.Query.TrimStart('?');
 

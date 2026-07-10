@@ -1,6 +1,3 @@
-@using Monivise.App.Components.Atoms;
-@using Monivise.App.Components.Molecules
-@using Monivise.App.State.Actions;
 @page "/onboarding"
 @layout AuthLayout
 @attribute [Authorize]
@@ -30,6 +27,9 @@ else if (step == 2)
         <button type="button" @onclick="() => step = 1" style="background:none; border:none; padding:8px; font-size: var(--mv-fs-lg); color: var(--mv-text-secondary); cursor:pointer; line-height:1;">&larr;</button>
         <div style="flex:1;">
             <Button Variant="secondary" OnClick="() => showItemsModal = true" Label="@($"Review & finish ({expenses.Count} added)")" />
+            <p style="font-size: var(--mv-fs-xs); margin: var(--mv-space-1) 0 0; color: @(RemainingBudget <= 0 ? "var(--mv-danger)" : "var(--mv-text-tertiary)");">
+                @(RemainingBudget <= 0 ? "No budget left — every naira is committed" : $"{CurrencyFormatter.Format(RemainingBudget)} left to commit")
+            </p>
         </div>
     </div>
 
@@ -84,6 +84,13 @@ else if (step == 2)
         <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: 0 0 var(--mv-space-2);">How much per month?</p>
         <p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-4) 0;">@FormatAmount(currentAmount)</p>
         <NumPad Value="@currentAmount" ValueChanged="v => currentAmount = v" />
+        @if (WouldExceedIncome())
+        {
+            <div style="height: var(--mv-space-3);"></div>
+            <p class="mv-field__error mv-shake" role="alert" style="margin:0;">
+                That's @CurrencyFormatter.Format(decimal.Parse(currentAmount) - RemainingBudget) more than you have left (@CurrencyFormatter.Format(RemainingBudget) remaining). Lower the amount, or remove another expense first.
+            </p>
+        }
         <div style="height: var(--mv-space-4);"></div>
         <Button Variant="primary" IsDisabled="@(!CanAddCurrentExpense())" OnClick="AddExpense" Label="Add expense" />
     }
@@ -125,10 +132,10 @@ else
                     }
                 </div>
                 <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin:0 0 var(--mv-space-1);">
-                    @FormatAmount(pathway.DailyLimit.ToString())/day &middot; @FormatAmount(pathway.WeeklyLimit.ToString())/week
+                    @(pathway.IsAffordable ? $"{FormatAmount(pathway.DailyLimit.ToString())}/day · {FormatAmount(pathway.WeeklyLimit.ToString())}/week" : "Not calculated — doesn't fit your income")
                 </p>
                 <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:0 0 var(--mv-space-3);">
-                    Save @pathway.SaveRate.ToString("P0") monthly
+                    @(pathway.IsAffordable ? $"Save {pathway.SaveRate:0.#}% monthly" : "")
                 </p>
                 @if (pathway.SuggestedCuts is { Count: > 0 })
                 {
@@ -143,10 +150,13 @@ else
 
 @if (showItemsModal)
 {
-    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:50; display:flex; align-items:flex-end;" @onclick="() => showItemsModal = false">
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,0.45); z-index:50; display:flex; align-items:flex-end;" @onclick="() => showItemsModal = false">
         <div class="mv-card mv-scale-in" style="width:100%; max-height:80vh; display:flex; flex-direction:column; border-radius: var(--mv-radius-lg) var(--mv-radius-lg) 0 0; background:var(--mv-surface); padding-bottom: env(safe-area-inset-bottom);" @onclick:stopPropagation="true">
             <div style="display:flex; justify-content:space-between; align-items:center; padding: var(--mv-space-4); border-bottom: 1px solid var(--mv-border);">
-                <p style="font-weight:600; margin:0;">Added expenses (@expenses.Count)</p>
+                <div>
+                    <p style="font-weight:600; margin:0;">Added expenses (@expenses.Count)</p>
+                    <p style="font-size: var(--mv-fs-xs); margin:2px 0 0; color: var(--mv-text-tertiary);">@CurrencyFormatter.Format(RemainingBudget) left of @CurrencyFormatter.Format(Income)</p>
+                </div>
                 <button type="button" @onclick="() => showItemsModal = false" style="background:none; border:none; font-size: var(--mv-fs-lg); color: var(--mv-text-tertiary); cursor:pointer;">&times;</button>
             </div>
 
@@ -212,11 +222,24 @@ else
         natureExpanded = false;
     }
 
+    private decimal Income => decimal.TryParse(incomeInput, out var i) ? i : 0;
+
+    private decimal CommittedSoFar =>
+        expenses.Where(e => e.Nature != "Unpriced").Sum(e => e.MonthlyAmount);
+
+    private decimal RemainingBudget => Math.Max(0, Income - CommittedSoFar);
+
+    private bool WouldExceedIncome() =>
+        currentNature != "Unpriced" &&
+        decimal.TryParse(currentAmount, out var a) && a > 0 &&
+        CommittedSoFar + a > Income;
+
     private bool CanAddCurrentExpense() =>
         !string.IsNullOrWhiteSpace(currentName) &&
         !string.IsNullOrEmpty(currentCategory) &&
         !string.IsNullOrEmpty(currentNature) &&
-        (currentNature == "Unpriced" || (decimal.TryParse(currentAmount, out var a) && a > 0));
+        (currentNature == "Unpriced" || (decimal.TryParse(currentAmount, out var a) && a > 0)) &&
+        !WouldExceedIncome();
 
     private bool HasUnsavedDraft() =>
         !string.IsNullOrWhiteSpace(currentName) && !CanAddCurrentExpense();

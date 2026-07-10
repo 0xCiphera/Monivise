@@ -26,9 +26,9 @@ namespace Monivise.Application.Services
             var items = profile.Items.ToList();
             decimal income = profile.BaselineMonthlyIncome;
 
-            decimal hard = items.Where(i => i.Nature == ItemNature.HardFixed)
+            decimal hard = items.Where(i => i.Nature == ItemNature.HardFixed && i.Category != ExpenseCategory.Investment)
                                 .Sum(i => i.MonthlyAmount);
-            decimal softBase = items.Where(i => i.Nature == ItemNature.Soft && !i.ReserveOnly)
+            decimal softBase = items.Where(i => i.Nature == ItemNature.Soft && !i.ReserveOnly && i.Category != ExpenseCategory.Investment)
                                     .Sum(i => i.MonthlyAmount);
             decimal investBase = items.Where(i => i.Category == ExpenseCategory.Investment)
                                       .Sum(i => i.MonthlyAmount);
