@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Monivise — Onboarding &amp; First-Run Blueprint</title>
+<style>
+  :root {
+    --mv-bg: #f6f7f9; --mv-surface: #ffffff; --mv-border: #e4e6ea; --mv-accent: #16181d;
+    --mv-text-primary: #16181d; --mv-text-secondary: #5b606b; --mv-text-tertiary: #8b9099;
+    --mv-positive: #1d9e75; --mv-danger: #d64545; --mv-warning-bg: #fdf1e0; --mv-warning-text: #b56a13;
+    --mv-buffer: #7c5cff; --mv-buffer-bg: #efe9ff;
+    --mv-radius-md: 12px; --mv-radius-lg: 16px;
+    --mv-space-1: 4px; --mv-space-2: 8px; --mv-space-3: 12px; --mv-space-4: 16px; --mv-space-5: 20px; --mv-space-6: 24px; --mv-space-7: 28px;
+    --mv-fs-xs: 11px; --mv-fs-sm: 13px; --mv-fs-md: 15px; --mv-fs-lg: 18px; --mv-fs-2xl: 28px;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:#2a2c31; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px 12px; }
+  .phone { width:380px; max-width:100%; background:var(--mv-bg); border-radius:32px; border:8px solid #111; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.5); display:flex; flex-direction:column; height:780px; position:relative; }
+  .statusbar { height:14px; background:var(--mv-bg); flex-shrink:0; }
+  .mv-shell--auth { flex:1; overflow-y:auto; padding: var(--mv-space-6); display:flex; flex-direction:column; }
+  .mv-progress { display:flex; gap:4px; margin-bottom: var(--mv-space-5); }
+  .mv-progress .seg { height:3px; flex:1; border-radius:2px; background:var(--mv-border); }
+  .mv-progress .seg.done { background:var(--mv-positive); }
+  .mv-title { font-size: var(--mv-fs-lg); font-weight:700; margin:0 0 var(--mv-space-2); }
+  .mv-sub { font-size: var(--mv-fs-sm); color:var(--mv-text-tertiary); margin:0 0 var(--mv-space-5); }
+  .mv-amount-display { text-align:center; font-size: var(--mv-fs-2xl); font-weight:700; margin: var(--mv-space-4) 0; }
+  .mv-field { margin-top: var(--mv-space-3); }
+  .mv-field__label { font-size: var(--mv-fs-xs); font-weight:700; }
+  .mv-field__input, .mv-field__select { width:100%; border:1.5px solid var(--mv-border); border-radius:var(--mv-radius-md); padding:10px 12px; font-size: var(--mv-fs-sm); margin-top:4px; background:var(--mv-surface); }
+  .mv-btn { width:100%; border:none; border-radius:var(--mv-radius-md); padding:13px; font-size: var(--mv-fs-sm); font-weight:700; cursor:pointer; margin-top: var(--mv-space-1); }
+  .mv-btn--primary { background:var(--mv-accent); color:#fff; }
+  .mv-btn--secondary { background:var(--mv-surface); color:var(--mv-accent); border:1.5px solid var(--mv-border); }
+  .mv-btn--sm { width:auto; padding:7px 12px; font-size: var(--mv-fs-xs); }
+  .mv-btn[disabled] { opacity:.4; cursor:not-allowed; }
+  .mv-hint { background:var(--mv-warning-bg); color:var(--mv-warning-text); border-radius:var(--mv-radius-md); padding: var(--mv-space-2) var(--mv-space-3); font-size: var(--mv-fs-xs); margin-bottom: var(--mv-space-3); display:flex; gap: var(--mv-space-2); }
+  .mv-note { font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); line-height:1.5; }
+  .mv-card { background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:var(--mv-radius-lg); padding: var(--mv-space-4); margin-bottom: var(--mv-space-3); }
+  .mv-card--hero { background:var(--mv-accent); color:#fff; }
+  .mv-choice { border:1.5px solid var(--mv-border); border-radius:var(--mv-radius-md); padding: var(--mv-space-3) var(--mv-space-4); margin-bottom: var(--mv-space-2); cursor:pointer; }
+  .mv-choice.selected { border-color:var(--mv-accent); background:#f2f2f4; }
+  .mv-choice .t { font-weight:700; font-size: var(--mv-fs-sm); }
+  .mv-choice .d { font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); margin-top:2px; }
+  .mv-toggle-row { display:flex; gap: var(--mv-space-2); margin-top: var(--mv-space-2); }
+  .mv-toggle-row button { flex:1; }
+  .mv-item-row { background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:var(--mv-radius-md); padding: var(--mv-space-3) var(--mv-space-4); margin-bottom: var(--mv-space-2); font-size: var(--mv-fs-sm); display:flex; justify-content:space-between; align-items:center; }
+  .mv-pill { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+  .mv-pill--unpriced { background:var(--mv-warning-bg); color:var(--mv-warning-text); }
+  .mv-sticky-top { position:sticky; top:0; background:var(--mv-bg); padding-bottom: var(--mv-space-3); margin-bottom: var(--mv-space-3); border-bottom:1px solid var(--mv-border); }
+  .screen { display:none; }
+  .screen.active { display:flex; flex-direction:column; height:100%; }
+  .mv-pathway-card { border:1.5px solid var(--mv-border); border-radius:var(--mv-radius-lg); padding: var(--mv-space-4); margin-bottom: var(--mv-space-3); }
+  .mv-pathway-card.recommended { border-color:var(--mv-accent); }
+  .mv-split-bar { display:flex; height:10px; border-radius:5px; overflow:hidden; margin: var(--mv-space-2) 0; }
+  .mv-nav { display:flex; border-top:1px solid var(--mv-border); background:var(--mv-surface); position:absolute; bottom:0; left:0; right:0; flex-shrink:0; }
+  .mv-nav__item { flex:1; text-align:center; padding:9px 0 8px; font-size:9px; color:var(--mv-text-tertiary); }
+  .mv-nav__item.active { color:var(--mv-accent); font-weight:700; }
+  .mv-nav__item .icon { font-size:17px; display:block; margin-bottom:2px; }
+  .mv-fab { position:absolute; bottom:62px; right:16px; width:48px; height:48px; border-radius:50%; background:var(--mv-accent); color:#fff; border:none; font-size:22px; box-shadow:0 6px 16px rgba(0,0,0,.3); }
+  .mv-empty { text-align:center; padding: var(--mv-space-7) var(--mv-space-4); }
+  .mv-empty .em { font-size:36px; margin-bottom: var(--mv-space-3); }
+  .mv-body { flex:1; overflow-y:auto; padding: 0 var(--mv-space-4) 90px; }
+  .mv-header { padding: var(--mv-space-2) var(--mv-space-4) var(--mv-space-2); }
+  .mv-header__brand { font-size: var(--mv-fs-xs); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--mv-text-tertiary); margin:0; }
+  .mv-header__title { font-size: var(--mv-fs-lg); font-weight:700; margin:2px 0 0; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar"></div>
+
+  <!-- ===== STEP 1: INCOME ===== -->
+  <div class="screen active" id="screen-step1">
+    <div class="mv-shell--auth">
+      <div class="mv-progress"><div class="seg done"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div></div>
+      <p class="mv-title">What's your monthly income?</p>
+      <p class="mv-sub">Your primary, reliable salary — not side income.</p>
+      <p class="mv-amount-display">₦280,000</p>
+      <div class="mv-hint">This becomes your "Confirm — I got paid" figure going forward. No retyping it every month.</div>
+      <div style="flex:1;"></div>
+      <button class="mv-btn mv-btn--primary" onclick="go('step2fixed')">Continue</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2a: FIXED OBLIGATIONS ===== -->
+  <div class="screen" id="screen-step2fixed">
+    <div class="mv-shell--auth">
+      <div class="mv-progress"><div class="seg done"></div><div class="seg done"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div></div>
+      <div class="mv-sticky-top"><button class="mv-btn mv-btn--secondary" onclick="openAddItem('fixed')">Review &amp; finish (2 added)</button></div>
+      <p class="mv-title" style="font-size:var(--mv-fs-md);">Fixed Obligations</p>
+      <p class="mv-sub">Rent, subscriptions, utilities — same amount every month. No "unpriced" option here; if you don't know it yet, estimate.</p>
+      <div class="mv-item-row"><div>Rent</div><div>₦150,000</div></div>
+      <div class="mv-item-row"><div>Data</div><div>₦18,000</div></div>
+      <div class="mv-field"><label class="mv-field__label">Item name</label><input class="mv-field__input" placeholder="e.g. Netflix"></div>
+      <div class="mv-field"><label class="mv-field__label">Amount / month</label><input class="mv-field__input" type="number" placeholder="0"></div>
+      <button class="mv-btn mv-btn--secondary" style="margin-top:var(--mv-space-3);">+ Add item</button>
+      <div style="flex:1;"></div>
+      <button class="mv-btn mv-btn--primary" onclick="go('step2flex')">Continue to Flexible Spending</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2b: FLEXIBLE SPENDING ===== -->
+  <div class="screen" id="screen-step2flex">
+    <div class="mv-shell--auth">
+      <div class="mv-progress"><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg"></div><div class="seg"></div></div>
+      <p class="mv-title" style="font-size:var(--mv-fs-md);">Flexible Spending</p>
+      <p class="mv-sub">Transport, food — important but the price shifts. Also no "unpriced" option; give your best monthly estimate.</p>
+      <div class="mv-item-row"><div>Transport</div><div>₦28,000</div></div>
+      <div class="mv-item-row"><div>Food</div><div>₦24,000</div></div>
+      <div class="mv-field"><label class="mv-field__label">Item name</label><input class="mv-field__input" placeholder="e.g. Airtime"></div>
+      <div class="mv-field"><label class="mv-field__label">Amount / month</label><input class="mv-field__input" type="number" placeholder="0"></div>
+      <button class="mv-btn mv-btn--secondary" style="margin-top:var(--mv-space-3);">+ Add item</button>
+      <div style="flex:1;"></div>
+      <button class="mv-btn mv-btn--primary" onclick="go('step2invest')">Continue to Investment</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2c: INVESTMENT ===== -->
+  <div class="screen" id="screen-step2invest">
+    <div class="mv-shell--auth">
+      <div class="mv-progress"><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg"></div><div class="seg"></div></div>
+      <p class="mv-title" style="font-size:var(--mv-fs-md);">Investment</p>
+      <p class="mv-sub">Pension, naira &amp; dollar investment. Building the habit — no unpriced items allowed here either.</p>
+      <div class="mv-item-row"><div>Pension</div><div>₦10,000</div></div>
+      <div class="mv-item-row"><div>Naira Investment</div><div>₦20,000</div></div>
+      <div class="mv-field"><label class="mv-field__label">Item name</label><input class="mv-field__input" placeholder="e.g. Dollar Investment"></div>
+      <div class="mv-field"><label class="mv-field__label">Amount / month</label><input class="mv-field__input" type="number" placeholder="0"></div>
+      <button class="mv-btn mv-btn--secondary" style="margin-top:var(--mv-space-3);">+ Add item</button>
+      <div style="flex:1;"></div>
+      <button class="mv-btn mv-btn--primary" onclick="go('step2wants')">Continue to Wants</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 2d: WANTS ===== -->
+  <div class="screen" id="screen-step2wants">
+    <div class="mv-shell--auth">
+      <div class="mv-progress"><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg"></div></div>
+      <p class="mv-title" style="font-size:var(--mv-fs-md);">Wants</p>
+      <p class="mv-sub">This is the only place a category can go without an amount — you can always add the number later once you have a sense of it.</p>
+      <div class="mv-item-row"><div>Outings</div><div>₦6,000</div></div>
+      <div class="mv-item-row"><div>Black Tax</div><span class="mv-pill mv-pill--unpriced">unpriced</span></div>
+      <div class="mv-field"><label class="mv-field__label">Category name</label><input class="mv-field__input" placeholder="e.g. Dates"></div>
+      <div class="mv-toggle-row">
+        <button class="mv-btn mv-btn--primary mv-btn--sm" onclick="toggleWantPricing(this)">Give it an amount</button>
+        <button class="mv-btn mv-btn--secondary mv-btn--sm" onclick="toggleWantPricing(this)">Leave unpriced</button>
+      </div>
+      <div class="mv-field" id="wantAmountField"><label class="mv-field__label">Amount / month</label><input class="mv-field__input" type="number" placeholder="0"></div>
+      <button class="mv-btn mv-btn--secondary" style="margin-top:var(--mv-space-3);">+ Add category</button>
+      <div class="mv-hint" style="margin-top:var(--mv-space-4);">⚠ You need at least one Want category to finish onboarding — Wants is the one bucket that can't be empty.</div>
+      <div style="flex:1;"></div>
+      <button class="mv-btn mv-btn--primary" onclick="go('step3')">Continue to pathway</button>
+    </div>
+  </div>
+
+  <!-- ===== STEP 3: PATHWAY ===== -->
+  <div class="screen" id="screen-step3">
+    <div class="mv-shell--auth">
+      <div class="mv-progress"><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div></div>
+      <p class="mv-title">Choose your pathway</p>
+      <p class="mv-sub">Fixed Obligations, Flexible Spending and Investment are identical either way. This only decides your leftover ₦7,300/mo: how much becomes Buffer vs. goes toward your Wants.</p>
+
+      <div class="mv-pathway-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><p style="font-weight:700; margin:0;">Prudent</p><span class="mv-pill" style="background:var(--mv-buffer-bg); color:var(--mv-buffer);">70% buffer</span></div>
+        <div class="mv-split-bar"><div style="width:70%; background:var(--mv-buffer);"></div><div style="width:30%; background:#e0a13a;"></div></div>
+        <p class="mv-note">₦5,110 → Buffer &middot; ₦2,190 → Wants</p>
+        <button class="mv-btn mv-btn--secondary" onclick="commitPathway()">Choose Prudent</button>
+      </div>
+
+      <div class="mv-pathway-card recommended">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><p style="font-weight:700; margin:0;">Moderate</p><span class="mv-pill" style="background:var(--mv-buffer-bg); color:var(--mv-buffer);">50% buffer</span></div>
+        <div class="mv-split-bar"><div style="width:50%; background:var(--mv-buffer);"></div><div style="width:50%; background:#e0a13a;"></div></div>
+        <p class="mv-note">₦3,650 → Buffer &middot; ₦3,650 → Wants</p>
+        <button class="mv-btn mv-btn--primary" onclick="commitPathway()">Choose Moderate</button>
+      </div>
+
+      <div class="mv-pathway-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><p style="font-weight:700; margin:0;">Comfortable</p><span class="mv-pill" style="background:var(--mv-buffer-bg); color:var(--mv-buffer);">25% buffer</span></div>
+        <div class="mv-split-bar"><div style="width:25%; background:var(--mv-buffer);"></div><div style="width:75%; background:#e0a13a;"></div></div>
+        <p class="mv-note">₦1,825 → Buffer &middot; ₦5,475 → Wants</p>
+        <button class="mv-btn mv-btn--secondary" onclick="commitPathway()">Choose Comfortable</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FIRST-RUN DASHBOARD (before income confirmed) ===== -->
+  <div class="screen" id="screen-firstrun">
+    <div class="mv-header"><p class="mv-header__brand">Monivise</p><p class="mv-header__title">Home</p></div>
+    <div class="mv-body">
+      <div class="mv-empty">
+        <div class="em">👋</div>
+        <p style="font-weight:700; margin:0 0 6px;">You're set up — one step left</p>
+        <p class="mv-note" style="margin-bottom:var(--mv-space-5);">Your buckets are ready but empty. Confirm your income to fund them and see real numbers.</p>
+        <button class="mv-btn mv-btn--primary" onclick="alert('Opens Record income → Primary tab, pre-filled, one tap.')">Confirm — I got paid</button>
+      </div>
+      <p class="mv-note" style="text-align:center;">Buckets showing ₦0 below is expected until then:</p>
+      <div class="mv-card" style="margin-top:var(--mv-space-3); opacity:.5;">
+        <div style="display:flex; justify-content:space-between;"><span>🏠 Fixed Obligations</span><span>₦0</span></div>
+      </div>
+      <div class="mv-card" style="opacity:.5;">
+        <div style="display:flex; justify-content:space-between;"><span>🛒 Flexible Spending</span><span>₦0</span></div>
+      </div>
+    </div>
+    <button class="mv-fab">+</button>
+    <nav class="mv-nav">
+      <div class="mv-nav__item active"><span class="icon">🏠</span>Home</div>
+      <div class="mv-nav__item"><span class="icon">🎯</span>Goals</div>
+      <div class="mv-nav__item"><span class="icon">📅</span>Weekly</div>
+      <div class="mv-nav__item"><span class="icon">⚙️</span>Settings</div>
+    </nav>
+  </div>
+
+  <!-- ===== GOALS EMPTY STATE ===== -->
+  <div class="screen" id="screen-goalsempty">
+    <div class="mv-header"><p class="mv-header__brand">Monivise</p><p class="mv-header__title">Goals</p></div>
+    <div class="mv-body">
+      <div class="mv-empty">
+        <div class="em">🎯</div>
+        <p style="font-weight:700; margin:0 0 6px;">No goals yet</p>
+        <p class="mv-note" style="margin-bottom:var(--mv-space-5);">This is the only screen in Monivise allowed to start empty. Everything else — Fixed, Flexible, Investment, Wants — is set during onboarding.</p>
+        <button class="mv-btn mv-btn--primary">+ Create your first goal</button>
+      </div>
+    </div>
+    <button class="mv-fab">+</button>
+    <nav class="mv-nav">
+      <div class="mv-nav__item"><span class="icon">🏠</span>Home</div>
+      <div class="mv-nav__item active"><span class="icon">🎯</span>Goals</div>
+      <div class="mv-nav__item"><span class="icon">📅</span>Weekly</div>
+      <div class="mv-nav__item"><span class="icon">⚙️</span>Settings</div>
+    </nav>
+  </div>
+
+  <div style="position:absolute; top:8px; left:8px; right:8px; z-index:99; display:flex; gap:4px; flex-wrap:wrap;">
+    <button onclick="go('step1')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">1</button>
+    <button onclick="go('step2fixed')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">2a</button>
+    <button onclick="go('step2flex')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">2b</button>
+    <button onclick="go('step2invest')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">2c</button>
+    <button onclick="go('step2wants')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">2d</button>
+    <button onclick="go('step3')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">3</button>
+    <button onclick="go('firstrun')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">First-run</button>
+    <button onclick="go('goalsempty')" style="font-size:9px; padding:3px 6px; border-radius:6px; border:none; background:#fff; opacity:.85;">Goals empty</button>
+  </div>
+</div>
+
+<script>
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+function toggleWantPricing(btn) {
+  const buttons = btn.parentElement.querySelectorAll('button');
+  buttons.forEach(b => b.className = 'mv-btn mv-btn--sm mv-btn--secondary');
+  btn.className = 'mv-btn mv-btn--sm mv-btn--primary';
+  document.getElementById('wantAmountField').style.display = btn.textContent.includes('unpriced') ? 'none' : 'block';
+}
+function openAddItem(section) { /* placeholder for review sheet, same pattern as current onboarding */ }
+function commitPathway() {
+  alert('Pathway committed. Buckets seeded, baseline income auto-recorded — landing on first-run Dashboard.');
+  go('firstrun');
+}
+</script>
+
+</body>
+</html>
