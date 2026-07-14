@@ -1,0 +1,16 @@
+﻿<div class="mv-header">
+    <p class="mv-header__brand">@Brand</p>
+    <p class="mv-header__title">@Title</p>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="mv-header__subtitle">@Subtitle</p>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Brand { get; set; } = "Monivise";
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

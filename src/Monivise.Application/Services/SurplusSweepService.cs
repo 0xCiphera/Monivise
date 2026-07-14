@@ -42,8 +42,22 @@ namespace Monivise.Application.Services
                 decimal safe = finance.GetSafeToSpend(bks, cycle.Transactions);
                 decimal pace = finance.GetSpendingPace(bks, cycle.Transactions, cycle);
                 decimal daily = finance.GetDailyLimit(safe, pace, cycle);
-                // placeholder: real per-day spent compare done client-side; expose daily for UI
-                dto.DailyUnderspend = 0;
+
+                var weekStart = DateTime.UtcNow.Date.AddDays(-7);
+                var dailySpend = cycle.Transactions
+                    .Where(t => t.Kind == TransactionKind.Expense && t.Date.Date >= weekStart)
+                    .GroupBy(t => t.Date.Date)
+                    .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
+
+                var daysElapsed = Math.Min(7, (DateTime.UtcNow.Date - weekStart).Days);
+                decimal underspend = 0m;
+                for (int i = 0; i < daysElapsed; i++)
+                {
+                    var day = weekStart.AddDays(i);
+                    var spentThatDay = dailySpend.TryGetValue(day, out var v) ? v : 0m;
+                    underspend += Math.Max(0, daily - spentThatDay);
+                }
+                dto.DailyUnderspend = Math.Round(underspend, 2);
             }
 
             if (active != null)

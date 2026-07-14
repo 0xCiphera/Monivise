@@ -59,7 +59,7 @@ public class SafeToSpendTests
     public void SafeToSpend_SavingsBucketsAreCompletelyIgnored()
     {
         var flex = MakeBucket(BucketType.Flexible, 75);
-        var savings = MakeBucket(BucketType.Savings, 25);
+        var savings = MakeBucket(BucketType.Investment, 25);
         var cycleId = Guid.NewGuid();
 
         var txns = new[]

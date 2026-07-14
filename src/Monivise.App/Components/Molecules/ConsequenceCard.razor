@@ -1,0 +1,72 @@
+﻿<div class="mv-card mv-consequence">
+    <div class="mv-consequence__grid">
+        <div>
+            <p class="mv-consequence__label">Before</p>
+            <p class="mv-consequence__value">@CurrencyFormatter.Format(Preview.CurrentBalance)</p>
+        </div>
+        <div>
+            <p class="mv-consequence__label">After</p>
+            <p class="mv-consequence__value" style="@afterStyle">@CurrencyFormatter.Format(Preview.PostSpendBalance)</p>
+        </div>
+    </div>
+    <ProgressBar Percent="@remainingPercent" Color="@DeltaColor" Height="5" />
+    <p class="mv-consequence__note">Leaves @remainingPercent.ToString("0")% of this bucket for the next @Preview.DaysRemaining days.</p>
+    @if (Preview.RegretSignals is { Count: > 0 })
+    {
+        <details class="mv-consequence__regret">
+            <summary>@Preview.RegretSignals.Count regret signal(s)</summary>
+            <ul>
+                @foreach (var signal in Preview.RegretSignals)
+                {
+                    <li>@signal</li>
+                }
+            </ul>
+        </details>
+    }
+</div>
+
+<style>
+    .mv-consequence__grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .mv-consequence__label {
+        font-size: 11px;
+        color: var(--mv-text-tertiary);
+        margin: 0;
+    }
+
+    .mv-consequence__value {
+        font-size: var(--mv-fs-md);
+        font-weight: 600;
+        margin: 2px 0 0;
+    }
+
+    .mv-consequence__note {
+        font-size: var(--mv-fs-xs);
+        color: var(--mv-text-tertiary);
+        margin: 8px 0 0;
+    }
+
+    .mv-consequence__regret {
+        margin-top: 10px;
+        font-size: var(--mv-fs-xs);
+        color: var(--mv-warning-text);
+    }
+</style>
+
+@code {
+    [Parameter] public SimulateResponse Preview { get; set; } = default!;
+
+    private double remainingPercent => Preview.CurrentBalance <= 0 ? 0 :
+        (double)(Preview.PostSpendBalance / Preview.CurrentBalance * 100);
+
+    private string DeltaColor => Preview.CanAfford
+        ? (Preview.PaceScore >= 0.7m ? "var(--mv-warning)" : "var(--mv-positive)")
+        : "var(--mv-danger)";
+
+    private string afterStyle => $"color:{DeltaColor};";
+}

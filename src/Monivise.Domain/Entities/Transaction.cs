@@ -11,6 +11,8 @@ namespace Monivise.Domain.Entities
         public Guid UserId { get; private set; }
         public Guid BucketId { get; private set; }
         public Guid CycleId { get; private set; }
+        public Guid? IntakeItemId { get; private set; }
+        public Guid? WantCategoryId { get; private set; }
         public TransactionKind Kind { get; private set; }
         public decimal Amount { get; private set; }
         public string Note { get; private set; } = string.Empty;
@@ -22,6 +24,8 @@ namespace Monivise.Domain.Entities
         // Navigation
         public Bucket Bucket { get; private set; } = null!;
         public BudgetCycle Cycle { get; private set; } = null!;
+        public IntakeItem? IntakeItem { get; private set; }
+        public WantCategory? WantCategoryRef { get; private set; }
 
         protected Transaction() { }
 
@@ -43,9 +47,11 @@ namespace Monivise.Domain.Entities
         }
 
         public static Transaction CreateExpense(Guid userId, Guid bucketId, Guid cycleId,
-            decimal amount, string note, DateTime? date = null)
+            decimal amount, string note, Guid? intakeItemId = null, Guid? wantCategoryId = null, DateTime? date = null)
         {
             if (amount <= 0) throw new ArgumentException("Amount must be positive");
+            if (intakeItemId != null && wantCategoryId != null)
+                throw new ArgumentException("A transaction can reference an intake item OR a want category, not both");
             return new Transaction
             {
                 UserId = userId,
@@ -54,6 +60,8 @@ namespace Monivise.Domain.Entities
                 Kind = TransactionKind.Expense,
                 Amount = amount,
                 Note = note,
+                IntakeItemId = intakeItemId,
+                WantCategoryId = wantCategoryId,
                 Date = date ?? DateTime.UtcNow
             };
         }

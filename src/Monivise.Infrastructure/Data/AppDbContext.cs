@@ -18,6 +18,8 @@ namespace Monivise.Infrastructure.Data
         public DbSet<IntakeProfile> IntakeProfiles => Set<IntakeProfile>();
         public DbSet<IntakeItem> IntakeItems => Set<IntakeItem>();
         public DbSet<Goal> Goals => Set<Goal>();
+        public DbSet<WantCategory> WantCategories => Set<WantCategory>();
+        public DbSet<FixedObligationStatus> FixedObligationStatuses => Set<FixedObligationStatus>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

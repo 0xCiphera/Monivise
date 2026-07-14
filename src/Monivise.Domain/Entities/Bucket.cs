@@ -39,7 +39,7 @@ namespace Monivise.Domain.Entities
                 Color = color,
                 Type = type,
                 AllocationPercent = allocationPercent,
-                SavingsTarget = type == BucketType.Savings ? savingsTarget : null,
+                SavingsTarget = type == BucketType.Investment ? savingsTarget : null,
                 DisplayOrder = displayOrder
             };
         }

@@ -1,5 +1,6 @@
 ﻿using Monivise.Application.DTOs.Buckets;
 using Monivise.Application.DTOs.Cycles;
+using Monivise.Application.DTOs.Transactions;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -18,6 +19,7 @@ namespace Monivise.Application.DTOs.Dashboard
         public decimal TotalIncome { get; set; }
         public decimal TotalSpent { get; set; }
         public List<BucketResponseDto> Buckets { get; set; } = [];
+        public List<TransactionResponseDto> Transactions { get; set; } = [];
         public CycleResponseDto? CurrentCycle { get; set; }
     }
 }

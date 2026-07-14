@@ -14,6 +14,7 @@ namespace Monivise.Infrastructure.Data.Configurations
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Status).HasConversion<string>();
             builder.HasIndex(c => new { c.UserId, c.Status });
+            builder.Property(c => c.BufferBalance).HasPrecision(18, 2);
         }
     }
 }

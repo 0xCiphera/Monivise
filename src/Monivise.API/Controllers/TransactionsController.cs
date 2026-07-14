@@ -43,7 +43,7 @@ namespace Monivise.API.Controllers
             var buckets = (await _buckets.GetActiveByUserIdAsync(UserId, ct)).ToList();
             var incomeType = Enum.Parse<Monivise.Domain.Enums.IncomeType>(dto.IncomeType);
             var splits = dto.IncomeType == "Extra"
-                ? _calc.AllocateIncome(dto.Amount, buckets.Where(b => b.Type == BucketType.Savings)).ToList()
+                ? _calc.AllocateIncome(dto.Amount, buckets.Where(b => b.Type == BucketType.Investment)).ToList()
                 : _calc.AllocateIncome(dto.Amount, buckets).ToList();
 
             var txns = splits.Select(s => Transaction.CreateIncome(
@@ -126,6 +126,7 @@ namespace Monivise.API.Controllers
                 Amount = t.Amount,
                 Note = t.Note,
                 Source = t.Source,
+                IncomeType = t.IncomeType.ToString(),
                 Date = t.Date
             }));
         }

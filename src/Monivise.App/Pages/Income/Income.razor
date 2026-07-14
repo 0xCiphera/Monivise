@@ -1,0 +1,82 @@
+@page "/income"
+@layout AppShell
+@attribute [Authorize]
+@inject TransactionApiClient TxApi
+@inject IDispatcher Dispatcher
+
+<div style="display:flex; gap: var(--mv-space-2); margin-bottom: var(--mv-space-4);">
+    <button type="button" class="mv-btn mv-btn--@(isPrimary ? "primary" : "secondary")" style="flex:1; padding: var(--mv-space-3) var(--mv-space-4); min-height:44px; border-radius: var(--mv-radius-md); border: 1.5px solid @(isPrimary ? "var(--mv-accent)" : "var(--mv-border)"); background: @(isPrimary ? "var(--mv-accent)" : "var(--mv-surface)"); color: @(isPrimary ? "var(--mv-accent-text)" : "var(--mv-text-primary)"); font-weight: 600; font-size: var(--mv-fs-sm); cursor: pointer; transition: all var(--mv-motion-fast);" @onclick="() => isPrimary = true">Primary</button>
+    <button type="button" class="mv-btn mv-btn--@(!isPrimary ? "primary" : "secondary")" style="flex:1; padding: var(--mv-space-3) var(--mv-space-4); min-height:44px; border-radius: var(--mv-radius-md); border: 1.5px solid @(!isPrimary ? "var(--mv-accent)" : "var(--mv-border)"); background: @(!isPrimary ? "var(--mv-accent)" : "var(--mv-surface)"); color: @(!isPrimary ? "var(--mv-accent-text)" : "var(--mv-text-primary)"); font-weight: 600; font-size: var(--mv-fs-sm); cursor: pointer; transition: all var(--mv-motion-fast);" @onclick="() => isPrimary = false">Extra</button>
+</div>
+
+<p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-4);">@CurrencyFormatter.Format(amountInput)</p>
+<NumPad Value="@amountText" ValueChanged="v => amountText = v" />
+
+<div class="mv-field" style="margin-top: var(--mv-space-4);">
+    <label class="mv-field__label">Source</label>
+    <select class="mv-field__input" @bind="source">
+        <option value="Salary">Salary</option>
+        <option value="Freelance">Freelance</option>
+        <option value="Business">Business</option>
+        <option value="Gift">Gift</option>
+        <option value="Other">Other</option>
+    </select>
+</div>
+
+@if (errorMessage is not null)
+{
+    <p class="mv-field__error mv-shake" role="alert" style="margin-bottom: var(--mv-space-3);">@errorMessage</p>
+}
+
+<div style="height: var(--mv-space-4);"></div>
+<Button Variant="primary" IsDisabled="@(amountInput <= 0)" IsLoading="isSubmitting" OnClick="Allocate" Label="Continue" />
+
+@if (results.Count > 0)
+{
+    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-2);">Allocated to</p>
+    <div class="mv-card">
+        @foreach (var r in results)
+        {
+            <div style="display:flex; justify-content:space-between; padding: var(--mv-space-3) 0; border-bottom:1px solid var(--mv-border);">
+                <span style="font-size: var(--mv-fs-sm); color: var(--mv-text-secondary);">@r.BucketName</span>
+                <span style="font-size: var(--mv-fs-sm); font-weight:600;">@CurrencyFormatter.Format(r.Amount)</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool isPrimary = true;
+    private string amountText = "0";
+    private decimal amountInput => decimal.TryParse(amountText, out var v) ? v : 0;
+    private string source = "Salary";
+    private bool isSubmitting;
+    private string? errorMessage;
+    private List<AllocationResult> results = new();
+
+    private async Task Allocate()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        try
+        {
+            var incomeType = isPrimary ? "Primary" : "Extra";
+            await TxApi.RecordIncomeAsync(new RecordIncomeRequest(amountInput, source, incomeType));
+            Dispatcher.Dispatch(new ShowSuccessAction("Income allocated."));
+            Dispatcher.Dispatch(new LoadDashboardAction());
+            amountText = "0";
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Network error. Please check your connection.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

@@ -11,6 +11,5 @@ namespace Monivise.Application.DTOs.Auth
         public DateTime ExpiresAt { get; set; }
         public Guid UserId { get; set; }
         public string DisplayName { get; set; } = string.Empty;
-        public string Currency { get; set; } = string.Empty;
     }
 }

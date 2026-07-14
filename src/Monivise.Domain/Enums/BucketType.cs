@@ -8,6 +8,7 @@ namespace Monivise.Domain.Enums
     {
         Fixed,
         Flexible,
-        Savings   
+        Investment,
+        Wants
     }
 }

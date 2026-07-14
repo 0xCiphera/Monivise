@@ -14,6 +14,7 @@ namespace Monivise.Domain.Entities
         public DateTime EndDate { get; private set; }
         public CycleStatus Status { get; private set; } = CycleStatus.Active;
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
+        public decimal BufferBalance { get; private set; }
 
         // Navigation
         public User User { get; private set; } = null!;
@@ -55,6 +56,25 @@ namespace Monivise.Domain.Entities
                 if (today > EndDate.Date) return 0;
                 return Math.Max(0, (int)(EndDate.Date - today).TotalDays);
             }
+        }
+
+        public void SeedBuffer(decimal amount)
+        {
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            BufferBalance = amount;
+        }
+
+        public void DrawFromBuffer(decimal amount)
+        {
+            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            if (amount > BufferBalance) throw new InvalidOperationException("Insufficient buffer balance");
+            BufferBalance -= amount;
+        }
+
+        public void AddToBuffer(decimal amount)
+        {
+            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            BufferBalance += amount;
         }
 
         public void Close() => Status = CycleStatus.Closed;

@@ -1,0 +1,31 @@
+﻿<div class="mv-chip-list">
+    @foreach (var chip in Items)
+    {
+        <button type="button" class="mv-chip" @onclick="() => OnChipClick.InvokeAsync(chip)">
+            @chip.Label
+        </button>
+    }
+</div>
+
+<style>
+    .mv-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .mv-chip {
+        background: var(--mv-surface-sunken);
+        border: none;
+        border-radius: var(--mv-radius-pill);
+        padding: 6px 12px;
+        font-size: var(--mv-fs-xs);
+        cursor: pointer;
+    }
+</style>
+
+@code {
+    public record Chip(string Id, string Label);
+    [Parameter] public List<Chip> Items { get; set; } = new();
+    [Parameter] public EventCallback<Chip> OnChipClick { get; set; }
+}

@@ -1,0 +1,52 @@
+﻿<div class="mv-choice @(Selected ? "mv-choice--selected" : "")" role="radio" aria-checked="@Selected" tabindex="0"
+     @onclick="HandleClick" @onkeydown="HandleKeyDown">
+    <p class="mv-choice__title">@Title</p>
+    <p class="mv-choice__desc">@Description</p>
+    @ChildContent
+</div>
+
+<style>
+    .mv-choice {
+        border: 1.5px solid var(--mv-border);
+        border-radius: var(--mv-radius-md);
+        padding: 12px;
+        cursor: pointer;
+    }
+
+    .mv-choice--selected {
+        border-color: var(--mv-info);
+        background: var(--mv-info-bg);
+    }
+
+        .mv-choice--selected .mv-choice__title {
+            color: var(--mv-info-text);
+        }
+
+        .mv-choice--selected .mv-choice__desc {
+            color: var(--mv-info-text);
+        }
+
+    .mv-choice__title {
+        font-size: var(--mv-fs-md);
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .mv-choice__desc {
+        font-size: var(--mv-fs-xs);
+        color: var(--mv-text-tertiary);
+        margin: 2px 0 0;
+    }
+</style>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public EventCallback OnSelect { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private Task HandleClick() => OnSelect.HasDelegate ? OnSelect.InvokeAsync() : Task.CompletedTask;
+    private Task HandleKeyDown(KeyboardEventArgs e) =>
+        e.Key is "Enter" or " " ? HandleClick() : Task.CompletedTask;
+}

@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Monivise.Application.DTOs.Auth;
 using Monivise.Application.Interfaces.Repositories;
-using DomainUser = Monivise.Domain.Entities.User;
 using Monivise.Infrastructure.Auth;
+using System.Security.Claims;
+using DomainUser = Monivise.Domain.Entities.User;
 
 namespace Monivise.API.Controllers
 {
@@ -37,7 +39,7 @@ namespace Monivise.API.Controllers
                 return BadRequest(new ProblemDetails { Title = "Password is required", Status = 400 });
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
-            var user = DomainUser.Create(dto.Email, passwordHash, dto.DisplayName, dto.Currency);
+            var user = DomainUser.Create(dto.Email, passwordHash, dto.DisplayName);
 
             // Generate refresh token
             var refreshToken = _jwt.GenerateRefreshToken();
@@ -57,8 +59,7 @@ namespace Monivise.API.Controllers
                 RefreshToken = refreshToken, // Also send in body for initial storage
                 ExpiresAt = expiresAt,
                 UserId = user.Id,
-                DisplayName = user.DisplayName,
-                Currency = user.Currency
+                DisplayName = user.DisplayName
             });
         }
 
@@ -91,8 +92,7 @@ namespace Monivise.API.Controllers
                 RefreshToken = refreshToken,
                 ExpiresAt = expiresAt,
                 UserId = user.Id,
-                DisplayName = user.DisplayName,
-                Currency = user.Currency
+                DisplayName = user.DisplayName
             });
         }
 
@@ -125,20 +125,20 @@ namespace Monivise.API.Controllers
                 RefreshToken = newRefreshToken,
                 ExpiresAt = expiresAt,
                 UserId = user.Id,
-                DisplayName = user.DisplayName,
-                Currency = user.Currency
+                DisplayName = user.DisplayName
             });
         }
 
-      
+
         [HttpPost("logout")]
+        [Authorize]                      
         [ProducesResponseType(200)]
         public async Task<IActionResult> Logout(CancellationToken ct)
         {
-            var userId = User.Identity?.Name;
-            if (!string.IsNullOrEmpty(userId))
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
             {
-                var user = await _users.GetByIdAsync(Guid.Parse(userId), ct);
+                var user = await _users.GetByIdAsync(userId, ct);
                 if (user != null)
                 {
                     user.ClearRefreshToken();
@@ -156,7 +156,7 @@ namespace Monivise.API.Controllers
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Strict,
+                SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddDays(7)
             };
             Response.Cookies.Append("refreshToken", token, cookieOptions);
