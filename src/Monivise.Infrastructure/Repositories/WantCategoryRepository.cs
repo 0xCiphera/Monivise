@@ -26,6 +26,15 @@ namespace Monivise.Infrastructure.Repositories
         public async Task AddAsync(WantCategory wantCategory, CancellationToken ct = default)
             => await _db.WantCategories.AddAsync(wantCategory, ct);
 
+        public async Task AddRangeAsync(IEnumerable<WantCategory> wantCategories, CancellationToken ct = default)
+            => await _db.WantCategories.AddRangeAsync(wantCategories, ct);
+
+        public async Task DeactivateAllForUserAsync(Guid userId, CancellationToken ct = default)
+        {
+            var active = await _db.WantCategories.Where(w => w.UserId == userId && w.IsActive).ToListAsync(ct);
+            foreach (var w in active) w.Deactivate();
+        }
+
         public async Task SaveChangesAsync(CancellationToken ct = default)
             => await _db.SaveChangesAsync(ct);
     }

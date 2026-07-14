@@ -10,6 +10,8 @@ namespace Monivise.Application.Interfaces.Repositories
         Task<IEnumerable<WantCategory>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default);
         Task<WantCategory?> GetByIdAsync(Guid id, CancellationToken ct = default);
         Task AddAsync(WantCategory wantCategory, CancellationToken ct = default);
+        Task AddRangeAsync(IEnumerable<WantCategory> wantCategories, CancellationToken ct = default);
+        Task DeactivateAllForUserAsync(Guid userId, CancellationToken ct = default); 
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }
