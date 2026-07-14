@@ -28,6 +28,15 @@ namespace Monivise.Infrastructure.Data.Configurations
                 .WithMany(c => c.Transactions)
                 .HasForeignKey(t => t.CycleId)
                 .OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne(t => t.IntakeItem)
+                .WithMany()
+                .HasForeignKey(t => t.IntakeItemId)
+                .IsRequired(false);
+
+            builder.HasOne(t => t.WantCategoryRef)
+                .WithMany()
+                .HasForeignKey(t => t.WantCategoryId)
+                .IsRequired(false);
 
             builder.HasIndex(t => new { t.UserId, t.CycleId });
             builder.HasIndex(t => t.Date);

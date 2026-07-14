@@ -63,7 +63,6 @@ else
     <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:40;padding:var(--mv-space-4);">
         <div class="mv-card mv-scale-in" style="width:100%;max-width:360px;background:var(--mv-surface);">
             <p style="font-weight:600;margin:0 0 var(--mv-space-4);font-size:var(--mv-fs-lg);">New goal</p>
-            <Input Label="Icon (emoji)" Value="@icon" ValueChanged="v => icon = v" />
             <Input Label="Name" Value="@name" ValueChanged="v => name = v" ErrorMessage="@nameError" />
             <Input Label="Target amount" Type="number" InputMode="decimal" Value="@targetText" ValueChanged="v => targetText = v" ErrorMessage="@targetError" />
             @if (createError is not null)

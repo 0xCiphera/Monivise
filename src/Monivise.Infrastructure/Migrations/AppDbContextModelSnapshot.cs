@@ -125,6 +125,10 @@ namespace Monivise.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("BufferBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -146,6 +150,34 @@ namespace Monivise.Infrastructure.Migrations
                     b.HasIndex("UserId", "Status");
 
                     b.ToTable("BudgetCycles");
+                });
+
+            modelBuilder.Entity("Monivise.Domain.Entities.FixedObligationStatus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetCycleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("IntakeItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IntakeItemId");
+
+                    b.HasIndex("BudgetCycleId", "IntakeItemId")
+                        .IsUnique();
+
+                    b.ToTable("FixedObligationStatuses");
                 });
 
             modelBuilder.Entity("Monivise.Domain.Entities.Goal", b =>
@@ -289,6 +321,9 @@ namespace Monivise.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("Primary");
 
+                    b.Property<Guid?>("IntakeItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasColumnType("text");
@@ -306,6 +341,9 @@ namespace Monivise.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("WantCategoryId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BucketId");
@@ -313,6 +351,10 @@ namespace Monivise.Infrastructure.Migrations
                     b.HasIndex("CycleId");
 
                     b.HasIndex("Date");
+
+                    b.HasIndex("IntakeItemId");
+
+                    b.HasIndex("WantCategoryId");
 
                     b.HasIndex("UserId", "CycleId");
 
@@ -357,6 +399,43 @@ namespace Monivise.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Monivise.Domain.Entities.WantCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsUnpriced")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MonthlyAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsActive");
+
+                    b.ToTable("WantCategories");
+                });
+
             modelBuilder.Entity("Monivise.Domain.Entities.Bucket", b =>
                 {
                     b.HasOne("Monivise.Domain.Entities.User", "User")
@@ -377,6 +456,25 @@ namespace Monivise.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Monivise.Domain.Entities.FixedObligationStatus", b =>
+                {
+                    b.HasOne("Monivise.Domain.Entities.BudgetCycle", "Cycle")
+                        .WithMany()
+                        .HasForeignKey("BudgetCycleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Monivise.Domain.Entities.IntakeItem", "Item")
+                        .WithMany()
+                        .HasForeignKey("IntakeItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cycle");
+
+                    b.Navigation("Item");
                 });
 
             modelBuilder.Entity("Monivise.Domain.Entities.IntakeItem", b =>
@@ -404,9 +502,32 @@ namespace Monivise.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Monivise.Domain.Entities.IntakeItem", "IntakeItem")
+                        .WithMany()
+                        .HasForeignKey("IntakeItemId");
+
+                    b.HasOne("Monivise.Domain.Entities.WantCategory", "WantCategoryRef")
+                        .WithMany()
+                        .HasForeignKey("WantCategoryId");
+
                     b.Navigation("Bucket");
 
                     b.Navigation("Cycle");
+
+                    b.Navigation("IntakeItem");
+
+                    b.Navigation("WantCategoryRef");
+                });
+
+            modelBuilder.Entity("Monivise.Domain.Entities.WantCategory", b =>
+                {
+                    b.HasOne("Monivise.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Monivise.Domain.Entities.BudgetCycle", b =>

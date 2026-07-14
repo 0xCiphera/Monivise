@@ -31,6 +31,8 @@ namespace Monivise.Infrastructure
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IIntakeProfileRepository, IntakeProfileRepository>();
             services.AddScoped<IGoalRepository, GoalRepository>();
+            services.AddScoped<IWantCategoryRepository, WantCategoryRepository>();
+            services.AddScoped<IFixedObligationStatusRepository, FixedObligationStatusRepository>(); 
 
 
             // Financial services
