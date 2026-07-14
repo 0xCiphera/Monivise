@@ -8,6 +8,9 @@ namespace Monivise.Application.DTOs.Dashboard
     public record DecisionSimulationResult
     {
         public string BucketName { get; init; } = string.Empty;
+        public bool WillDrawFromBuffer { get; init; }  
+        public decimal BufferDrawAmount { get; init; }
+        public decimal BufferBalanceAfter { get; init; }
         public decimal Amount { get; init; }
         public decimal BucketBalanceBefore { get; init; }
         public decimal BucketBalanceAfter { get; init; }

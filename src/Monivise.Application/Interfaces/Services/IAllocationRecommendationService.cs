@@ -8,6 +8,6 @@ namespace Monivise.Application.Interfaces.Services
 {
     public interface IAllocationRecommendationService
     {
-        IEnumerable<PathwayPreviewDto> BuildPathways(IntakeProfile profile);
+        IEnumerable<PathwayPreviewDto> BuildPathways(IntakeProfile profile, IEnumerable<WantCategory> wantCategories);
     }
 }

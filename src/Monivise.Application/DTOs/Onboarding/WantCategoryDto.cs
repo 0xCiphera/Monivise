@@ -4,10 +4,10 @@ using System.Text;
 
 namespace Monivise.Application.DTOs.Onboarding
 {
-    public class PathwayBucketDto
+    public class WantCategoryDto
     {
         public string Name { get; set; } = string.Empty;
-        public string Type { get; set; } = string.Empty;   // Fixed|Flexible|Investment|Wants
-        public decimal AllocationPercent { get; set; }
+        public bool IsUnpriced { get; set; }
+        public decimal MonthlyAmount { get; set; }
     }
 }

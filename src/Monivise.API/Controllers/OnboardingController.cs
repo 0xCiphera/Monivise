@@ -17,15 +17,30 @@ namespace Monivise.API.Controllers
     ITransactionRepository transactions,
     IFinancialCalculationService calc,
     IAuditLogRepository audit,
+    IWantCategoryRepository wantCategories,
+    IFixedObligationStatusRepository fixedObligationStatuses,
     IAllocationRecommendationService recommender) : ApiControllerBase
     {
         /// <summary>Save intake + baseline, return 3 pathway previews.</summary>
         [HttpPost("intake")]
         public async Task<IActionResult> SubmitIntake([FromBody] SubmitIntakeDto dto, CancellationToken ct)
         {
-            decimal committed = dto.Items
-                .Where(i => i.Nature != "Unpriced")
-                .Sum(i => i.MonthlyAmount);
+            if (dto.Items.Any(i => i.Nature == "Unpriced"))
+                return UnprocessableEntity(new
+                {
+                    code = "UNPRICED_NOT_ALLOWED",
+                    detail = "Only Want categories can be left unpriced. Give every Fixed Obligation, Flexible Spending, and Investment item a real amount."
+                });
+
+            if (dto.WantCategories.Count == 0)
+                return UnprocessableEntity(new
+                {
+                    code = "WANTS_REQUIRED",
+                    detail = "At least one Want category is required to finish onboarding."
+                });
+
+            decimal committed = dto.Items.Sum(i => i.MonthlyAmount)
+                + dto.WantCategories.Where(w => !w.IsUnpriced).Sum(w => w.MonthlyAmount);
 
             if (committed > dto.BaselineIncome)
                 return UnprocessableEntity(new
@@ -47,9 +62,9 @@ namespace Monivise.API.Controllers
             {
                 profile = existing;
                 profile.UpdateBaseline(dto.BaselineIncome);
-                var staleItems = profile.Items.ToList();          // snapshot before clearing
+                var staleItems = profile.Items.ToList();
                 await intakes.DeleteItemsByProfileIdAsync(profile.Id, ct);
-                intakes.DetachItems(staleItems);                    // stop EF tracking the deleted rows
+                intakes.DetachItems(staleItems);
                 profile.ClearItems();
             }
 
@@ -59,8 +74,20 @@ namespace Monivise.API.Controllers
                     Enum.Parse<ItemNature>(i.Nature),
                     i.MonthlyAmount, i.ReserveOnly));
 
+            // Want categories persist independently of the intake profile — they're
+            // referenced long-term by Transactions, not just used to compute a preview.
+            await wantCategories.DeactivateAllForUserAsync(UserId, ct);
+            int order = 0;
+            var newWants = dto.WantCategories
+                .Select(w => WantCategory.Create(UserId, w.Name, w.IsUnpriced, w.MonthlyAmount, order++))
+                .ToList();
+            await wantCategories.AddRangeAsync(newWants, ct);
+
             await intakes.SaveChangesAsync(ct);
-            return Ok(recommender.BuildPathways(profile));
+            await wantCategories.SaveChangesAsync(ct);
+
+            var activeWants = await wantCategories.GetActiveByUserIdAsync(UserId, ct);
+            return Ok(recommender.BuildPathways(profile, activeWants));
         }
 
         /// <summary>Choose a pathway → seed buckets → record baseline income → complete onboarding.</summary>
@@ -69,9 +96,10 @@ namespace Monivise.API.Controllers
         {
             var profile = await intakes.GetByUserIdAsync(UserId, ct)
                 ?? throw new ArgumentException("No intake profile. Submit intake first.");
+            var activeWants = (await wantCategories.GetActiveByUserIdAsync(UserId, ct)).ToList();
 
             var chosen = Enum.Parse<PathwayType>(dto.Pathway);
-            var preview = recommender.BuildPathways(profile).First(p => p.Pathway == dto.Pathway);
+            var preview = recommender.BuildPathways(profile, activeWants).First(p => p.Pathway == dto.Pathway);
             if (!preview.IsAffordable)
                 return UnprocessableEntity(new { code = "PATHWAY_UNAFFORDABLE", preview.AffordabilityGap });
 
@@ -88,15 +116,23 @@ namespace Monivise.API.Controllers
             profile.ChoosePathway(chosen);
 
             var cycle = BudgetCycle.CreateCurrentMonth(UserId);
+            cycle.SeedBuffer(preview.BufferAmount);
+            cycle.SeedUnpricedPool(preview.UnpricedWantsPoolAmount);
             await cycles.AddAsync(cycle, ct);
 
-            // Save now so bucket rows have Ids before we split income across them.
             await buckets.SaveChangesAsync(ct);
             await cycles.SaveChangesAsync(ct);
 
-            // Automatically record the income you entered in step 1 — otherwise every
-            // bucket sits at ₦0 until you separately re-type the same figure on the
-            // Income page, even though it was already used to compute the pathway.
+            // Seed the paid-checklist — one row per Fixed Obligation item, unpaid, for this cycle.
+            var fixedItems = profile.Items.Where(i => i.Nature == ItemNature.HardFixed
+                && i.Category != Monivise.Domain.Enums.ExpenseCategory.Investment).ToList();
+            if (fixedItems.Count > 0)
+            {
+                var statuses = fixedItems.Select(i => FixedObligationStatus.Create(cycle.Id, i.Id));
+                await fixedObligationStatuses.AddAsync(statuses, ct);
+                await fixedObligationStatuses.SaveChangesAsync(ct);
+            }
+
             if (profile.BaselineMonthlyIncome > 0)
             {
                 var splits = calc.AllocateIncome(profile.BaselineMonthlyIncome, seededBuckets).ToList();
@@ -120,7 +156,9 @@ namespace Monivise.API.Controllers
         {
             var profile = await intakes.GetByUserIdAsync(UserId, ct);
             if (profile is null) return NoContent();
-            return Ok(recommender.BuildPathways(profile));
+
+            var activeWants = await wantCategories.GetActiveByUserIdAsync(UserId, ct);
+            return Ok(recommender.BuildPathways(profile, activeWants));
         }
     }
 }

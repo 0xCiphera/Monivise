@@ -118,8 +118,8 @@ namespace Monivise.Application.Services
 
         // ─── DECISION SIMULATION ───
 
-        public DecisionSimulationResult SimulateDecision(Guid bucketId, decimal amount,
-            IEnumerable<Bucket> buckets, IEnumerable<Transaction> txns, BudgetCycle cycle)
+        public DecisionSimulationResult SimulateDecision(Guid bucketId, Guid? intakeItemId, Guid? wantCategoryId,
+    decimal amount, IEnumerable<Bucket> buckets, IEnumerable<Transaction> txns, BudgetCycle cycle)
         {
             var txnList = txns.ToList();
             var bucketList = buckets.ToList();
@@ -132,15 +132,43 @@ namespace Monivise.Application.Services
             decimal dailyLimitBefore = GetDailyLimit(safeToSpendBefore, pace, cycle);
             decimal bucketBalanceBefore = GetBalance(bucketId, txnList);
 
-            decimal rawSafeToSpendAfter = safeToSpendBefore - amount;      // unclamped — feeds risk logic
-            decimal safeToSpendAfter = Math.Max(0m, rawSafeToSpendAfter);  // clamped — feeds display/DTO
+            // ── Item-level check, when the caller targets a specific item ──
+            bool willDrawFromBuffer = false;
+            decimal bufferDrawAmount = 0m;
+            decimal bufferBalanceAfter = cycle.BufferBalance;
+
+            if (intakeItemId is not null || wantCategoryId is not null)
+            {
+                decimal itemAllocated = txnList
+                    .Where(t => t.Kind == TransactionKind.Income
+                        && ((intakeItemId is not null && t.IntakeItemId == intakeItemId)
+                            || (wantCategoryId is not null && t.WantCategoryId == wantCategoryId)))
+                    .Sum(t => t.Amount);
+                decimal itemSpent = txnList
+                    .Where(t => t.Kind == TransactionKind.Expense
+                        && ((intakeItemId is not null && t.IntakeItemId == intakeItemId)
+                            || (wantCategoryId is not null && t.WantCategoryId == wantCategoryId)))
+                    .Sum(t => t.Amount);
+                decimal itemRemaining = itemAllocated - itemSpent;
+
+                if (amount > itemRemaining)
+                {
+                    decimal shortfall = amount - Math.Max(0, itemRemaining);
+                    willDrawFromBuffer = true;
+                    bufferDrawAmount = shortfall;
+                    bufferBalanceAfter = cycle.BufferBalance - shortfall; // may go negative — surfaced to caller, not clamped here
+                }
+            }
+
+            decimal rawSafeToSpendAfter = safeToSpendBefore - amount;
+            decimal safeToSpendAfter = Math.Max(0m, rawSafeToSpendAfter);
             decimal bucketBalanceAfter = bucketBalanceBefore - amount;
             decimal dailyLimitAfter = cycle.RemainingDays > 0 ? safeToSpendAfter / cycle.RemainingDays : 0m;
 
             decimal allocated = GetAllocated(bucketId, txnList);
             decimal spent = GetSpent(bucketId, txnList);
             decimal depletionPct = allocated > 0
-                 ? Math.Round((spent + amount) / allocated * 100m, 1)   // no upper clamp — Critical needs >100 to be reachable
+                 ? Math.Round((spent + amount) / allocated * 100m, 1)
                  : 100m;
 
             var flexBuckets = bucketList.Where(b => b.Type == BucketType.Flexible && b.IsActive);
@@ -150,12 +178,18 @@ namespace Monivise.Application.Services
             RiskLevel risk = GetRiskLevel(rawSafeToSpendAfter, dailyLimitAfter, avgDailyBudget, depletionPct);
 
             var regretSignals = new List<string>();
+            if (willDrawFromBuffer)
+                regretSignals.Add(bufferBalanceAfter >= 0
+                    ? $"₦{bufferDrawAmount:N0} of this would come from your Buffer"
+                    : "Even your Buffer can't fully cover this");
             if (dailyLimitAfter < avgDailyBudget * 0.4m)
                 regretSignals.Add("Post-spend daily limit drops below 40% of cycle average");
             if (depletionPct > 90)
                 regretSignals.Add($"{bucket.Name} bucket will be {depletionPct:F0}% depleted");
             if (cycle.RemainingDays <= 5 && safeToSpendAfter < dailyLimitBefore * 3)
                 regretSignals.Add($"Only {cycle.RemainingDays} days left — post-spend buffer is thin");
+
+            bool canAfford = willDrawFromBuffer ? bufferBalanceAfter >= 0 : bucketBalanceAfter >= 0;
 
             return new DecisionSimulationResult
             {
@@ -171,13 +205,15 @@ namespace Monivise.Application.Services
                 Risk = risk,
                 RegretSignals = regretSignals,
                 WillOverdraftBucket = bucketBalanceAfter < 0,
-                // Frontend-sync fields
+                WillDrawFromBuffer = willDrawFromBuffer,
+                BufferDrawAmount = bufferDrawAmount,
+                BufferBalanceAfter = bufferBalanceAfter,
                 CurrentBalance = bucketBalanceBefore,
                 PostSpendBalance = bucketBalanceAfter,
                 PaceScore = pace,
                 AverageDailySpend = avgDailyBudget,
                 DaysRemaining = cycle.RemainingDays,
-                CanAfford = safeToSpendAfter >= 0 && bucketBalanceAfter >= 0
+                CanAfford = canAfford
             };
         }
 

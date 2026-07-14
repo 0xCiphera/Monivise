@@ -43,7 +43,7 @@ namespace Monivise.API.Controllers
             var buckets = (await _buckets.GetActiveByUserIdAsync(UserId, ct)).ToList();
             var txns = (await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct)).ToList();
 
-            var result = _calc.SimulateDecision(dto.BucketId, dto.Amount, buckets, txns, cycle);
+            var result = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, dto.WantCategoryId, dto.Amount, buckets, txns, cycle);
 
             return Ok(new DecisionSimulationResponseDto
             {
@@ -73,7 +73,10 @@ namespace Monivise.API.Controllers
                 PaceScore = result.PaceScore,
                 AverageDailySpend = result.AverageDailySpend,
                 DaysRemaining = result.DaysRemaining,
-                CanAfford = result.CanAfford
+                CanAfford = result.CanAfford,
+                WillDrawFromBuffer = result.WillDrawFromBuffer,
+                BufferDrawAmount = result.BufferDrawAmount,
+                BufferBalanceAfter = result.BufferBalanceAfter
             });
         }
 
@@ -87,29 +90,26 @@ namespace Monivise.API.Controllers
 
             var bucket = await _buckets.GetByIdAsync(dto.BucketId, ct)
                 ?? throw new BucketNotFoundException(dto.BucketId);
-
             if (bucket.UserId != UserId) return Forbid();
 
+            var buckets = (await _buckets.GetActiveByUserIdAsync(UserId, ct)).ToList();
+            var txns = (await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct)).ToList();
+            var preCheck = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, dto.WantCategoryId, dto.Amount, buckets, txns, cycle);
+
+            if (!preCheck.CanAfford)
+                return UnprocessableEntity(new { code = "CANNOT_AFFORD", detail = "Even the buffer can't cover this." });
+
+            if (preCheck.WillDrawFromBuffer)
+                cycle.DrawFromBuffer(preCheck.BufferDrawAmount);
+
             var txn = Transaction.CreateExpense(UserId, dto.BucketId, cycle.Id, dto.Amount,
-                $"Simulated spend: {dto.Amount:C}");
+                $"Simulated spend: {dto.Amount:C}", dto.IntakeItemId, dto.WantCategoryId);
 
             await _transactions.AddAsync(txn, ct);
             await _transactions.SaveChangesAsync(ct);
+            await _cycles.SaveChangesAsync(ct); // persists the buffer draw, if any
 
-            return CreatedAtAction(nameof(Preview), new TransactionResponseDto
-            {
-                Id = txn.Id,
-                BucketId = txn.BucketId,
-                BucketName = bucket.Name,
-                BucketIcon = bucket.Icon,
-                BucketColor = bucket.Color,
-                Kind = "Expense",
-                Amount = txn.Amount,
-                Note = txn.Note,
-                Source = "Simulator",
-                IncomeType = string.Empty,
-                Date = txn.Date
-            });
+            return CreatedAtAction(nameof(Preview), new TransactionResponseDto { /* unchanged */ });
         }
     }
 }

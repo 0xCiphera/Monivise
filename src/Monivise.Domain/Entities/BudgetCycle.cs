@@ -15,6 +15,7 @@ namespace Monivise.Domain.Entities
         public CycleStatus Status { get; private set; } = CycleStatus.Active;
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public decimal BufferBalance { get; private set; }
+        public decimal UnpricedWantsPoolBalance { get; private set; }
 
         // Navigation
         public User User { get; private set; } = null!;
@@ -77,6 +78,24 @@ namespace Monivise.Domain.Entities
             BufferBalance += amount;
         }
 
+        public void SeedUnpricedPool(decimal amount)
+        {
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            UnpricedWantsPoolBalance = amount;
+        }
+
+        public void DrawFromUnpricedPool(decimal amount)
+        {
+            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            if (amount > UnpricedWantsPoolBalance) throw new InvalidOperationException("Insufficient unpriced-wants pool balance");
+            UnpricedWantsPoolBalance -= amount;
+        }
+
+        public void AddToUnpricedPool(decimal amount)
+        {
+            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            UnpricedWantsPoolBalance += amount;
+        }
         public void Close() => Status = CycleStatus.Closed;
     }
 }
