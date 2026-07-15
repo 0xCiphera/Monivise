@@ -1,0 +1,311 @@
+@page "/onboarding"
+@layout AuthLayout
+@attribute [Authorize]
+@inject OnboardingApiClient Api
+@inject IDispatcher Dispatcher
+@inject NavigationManager Nav
+
+<div style="display:flex; gap:4px; margin-bottom: var(--mv-space-5);">
+    <div style="height:3px; flex:1; border-radius:2px; background:@(step >= 1 ? "var(--mv-positive)" : "var(--mv-border)");"></div>
+    <div style="height:3px; flex:1; border-radius:2px; background:@(step >= 2 ? "var(--mv-positive)" : "var(--mv-border)");"></div>
+    <div style="height:3px; flex:1; border-radius:2px; background:@(step >= 3 ? "var(--mv-positive)" : "var(--mv-border)");"></div>
+</div>
+
+@if (step == 1)
+{
+    <p style="font-size: var(--mv-fs-lg); font-weight:600; margin:0 0 var(--mv-space-2);">What's your monthly income?</p>
+    <p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-4);">@FormatAmount(incomeInput)</p>
+    <NumPad Value="@incomeInput" ValueChanged="v => incomeInput = v" />
+    <div style="height: var(--mv-space-4);"></div>
+    <HintBox>Use only money you can count on every month.</HintBox>
+    <div style="height: var(--mv-space-5);"></div>
+    <Button Variant="primary" IsDisabled="@(!decimal.TryParse(incomeInput, out var inc) || inc <= 0)" OnClick="GoToStep2" Label="Continue" />
+}
+else if (step == 2)
+{
+    <div style="position:sticky; top:0; z-index:20; background:var(--mv-bg); padding-bottom: var(--mv-space-3); margin-bottom: var(--mv-space-4); border-bottom: 1px solid var(--mv-border); display:flex; align-items:center; gap: var(--mv-space-2);">
+        <button type="button" @onclick="() => step = 1" style="background:none; border:none; padding:8px; font-size: var(--mv-fs-lg); color: var(--mv-text-secondary); cursor:pointer; line-height:1;">&larr;</button>
+        <div style="flex:1;">
+            <Button Variant="secondary" OnClick="() => showItemsModal = true" Label="@($"Review & finish ({expenses.Count} added)")" />
+            <p style="font-size: var(--mv-fs-xs); margin: var(--mv-space-1) 0 0; color: @(RemainingBudget <= 0 ? "var(--mv-danger)" : "var(--mv-text-tertiary)");">
+                @(RemainingBudget <= 0 ? "No budget left — every naira is committed" : $"{CurrencyFormatter.Format(RemainingBudget)} left to commit")
+            </p>
+        </div>
+    </div>
+
+    <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:0 0 4px;">Expense @(expenses.Count + 1)</p>
+    <p style="font-size: var(--mv-fs-lg); font-weight:600; margin:0 0 var(--mv-space-4);">What do you spend on?</p>
+    <Input Placeholder="e.g. Netflix subscription" Value="@currentName" ValueChanged="v => currentName = v" />
+
+    <div style="height: var(--mv-space-4);"></div>
+
+    @if (string.IsNullOrEmpty(currentCategory) || categoryExpanded)
+    {
+        <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: 0 0 var(--mv-space-2);">Category</p>
+        <div style="display:flex; flex-direction:column; gap: var(--mv-space-2);">
+            <ChoiceCard Title="Need" Description="Essential expenses like rent, utilities, groceries."
+                        Selected='@(currentCategory == "Need")' OnSelect='() => SelectCategory("Need")' />
+            <ChoiceCard Title="Want" Description="Nice to have, but not critical."
+                        Selected='@(currentCategory == "Want")' OnSelect='() => SelectCategory("Want")' />
+            <ChoiceCard Title="Investment" Description="Savings, goals, future planning."
+                        Selected='@(currentCategory == "Investment")' OnSelect='() => SelectCategory("Investment")' />
+        </div>
+    }
+    else
+    {
+        <SummaryRow Label="Category" Value="@currentCategory" OnEdit="() => categoryExpanded = true" />
+    }
+
+    <div style="height: var(--mv-space-4);"></div>
+
+    @if (!string.IsNullOrEmpty(currentCategory))
+    {
+        @if (string.IsNullOrEmpty(currentNature) || natureExpanded)
+        {
+            <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: 0 0 var(--mv-space-2);">Is the amount fixed?</p>
+            <div style="display:flex; flex-direction:column; gap: var(--mv-space-2);">
+                <ChoiceCard Title="Hard fixed" Description="Same amount, every month. Like rent."
+                            Selected='@(currentNature == "HardFixed")' OnSelect='() => SelectNature("HardFixed")' />
+                <ChoiceCard Title="Soft" Description="Roughly the same, but it can shift."
+                            Selected='@(currentNature == "Soft")' OnSelect='() => SelectNature("Soft")' />
+                <ChoiceCard Title="Unpriced" Description="You don't know the amount yet."
+                            Selected='@(currentNature == "Unpriced")' OnSelect='() => { SelectNature("Unpriced"); currentAmount = "0"; }' />
+            </div>
+        }
+        else
+        {
+            <SummaryRow Label="Type" Value="@currentNature" OnEdit="() => natureExpanded = true" />
+        }
+    }
+
+    @if (currentNature == "HardFixed" || currentNature == "Soft")
+    {
+        <div style="height: var(--mv-space-4);"></div>
+        <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: 0 0 var(--mv-space-2);">How much per month?</p>
+        <p style="text-align:center; font-size: var(--mv-fs-2xl); font-weight:600; margin: var(--mv-space-4) 0;">@FormatAmount(currentAmount)</p>
+        <NumPad Value="@currentAmount" ValueChanged="v => currentAmount = v" />
+        @if (WouldExceedIncome())
+        {
+            <div style="height: var(--mv-space-3);"></div>
+            <p class="mv-field__error mv-shake" role="alert" style="margin:0;">
+                That's @CurrencyFormatter.Format(decimal.Parse(currentAmount) - RemainingBudget) more than you have left (@CurrencyFormatter.Format(RemainingBudget) remaining). Lower the amount, or remove another expense first.
+            </p>
+        }
+        <div style="height: var(--mv-space-4);"></div>
+        <Button Variant="primary" IsDisabled="@(!CanAddCurrentExpense())" OnClick="AddExpense" Label="Add expense" />
+    }
+    else if (currentNature == "Unpriced")
+    {
+        <div style="height: var(--mv-space-4);"></div>
+        <Button Variant="primary" IsDisabled="@(!CanAddCurrentExpense())" OnClick="AddExpense" Label="Add expense" />
+    }
+
+    <div style="height: var(--mv-space-4);"></div>
+    <HintBox>Hard fixed expenses are protected first, before anything flexible.</HintBox>
+}
+else
+{
+    <div style="display:flex; align-items:center; gap: var(--mv-space-2); margin-bottom: var(--mv-space-4);">
+        <button type="button" @onclick="() => step = 2" style="background:none; border:none; padding:8px; margin-left:-8px; font-size: var(--mv-fs-lg); color: var(--mv-text-secondary); cursor:pointer; line-height:1;">&larr;</button>
+        <p style="font-size: var(--mv-fs-lg); font-weight:600; margin:0;">Choose your pathway</p>
+    </div>
+
+    @if (isLoadingPathways)
+    {
+        <p style="color: var(--mv-text-secondary); text-align:center; padding: var(--mv-space-5) 0;">Working out your options…</p>
+    }
+    else if (pathwayError is not null)
+    {
+        <p class="mv-field__error" role="alert" style="margin-bottom: var(--mv-space-4);">@pathwayError</p>
+        <Button Variant="secondary" OnClick="LoadPathways" Label="Try again" />
+    }
+    else
+    {
+        @foreach (var pathway in pathways)
+        {
+            <div class="mv-card" style="margin-bottom: var(--mv-space-3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--mv-space-2);">
+                    <p style="font-size: var(--mv-fs-md); font-weight:600; margin:0;">@pathway.Pathway</p>
+                    @if (!pathway.IsAffordable)
+                    {
+                        <Badge Variant="warning">Gap: @FormatAmount(pathway.AffordabilityGap.ToString())</Badge>
+                    }
+                </div>
+                <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin:0 0 var(--mv-space-1);">
+                    @(pathway.IsAffordable ? $"{FormatAmount(pathway.DailyLimit.ToString())}/day · {FormatAmount(pathway.WeeklyLimit.ToString())}/week" : "Not calculated — doesn't fit your income")
+                </p>
+                <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:0 0 var(--mv-space-3);">
+                    @(pathway.IsAffordable ? $"Save {pathway.SaveRate:0.#}% monthly" : "")
+                </p>
+                @if (pathway.SuggestedCuts is { Count: > 0 })
+                {
+                    <HintBox>Suggested cuts: @string.Join(", ", pathway.SuggestedCuts)</HintBox>
+                    <div style="height: var(--mv-space-3);"></div>
+                }
+                <Button Variant="@(pathway.Pathway == "Moderate" ? "primary" : "secondary")" OnClick="() => Commit(pathway.Pathway)" Label="@($"Choose {pathway.Pathway}")" />
+            </div>
+        }
+    }
+}
+
+@if (showItemsModal)
+{
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,0.45); z-index:50; display:flex; align-items:flex-end;" @onclick="() => showItemsModal = false">
+        <div class="mv-card mv-scale-in" style="width:100%; max-height:80vh; display:flex; flex-direction:column; border-radius: var(--mv-radius-lg) var(--mv-radius-lg) 0 0; background:var(--mv-surface); padding-bottom: env(safe-area-inset-bottom);" @onclick:stopPropagation="true">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: var(--mv-space-4); border-bottom: 1px solid var(--mv-border);">
+                <div>
+                    <p style="font-weight:600; margin:0;">Added expenses (@expenses.Count)</p>
+                    <p style="font-size: var(--mv-fs-xs); margin:2px 0 0; color: var(--mv-text-tertiary);">@CurrencyFormatter.Format(RemainingBudget) left of @CurrencyFormatter.Format(Income)</p>
+                </div>
+                <button type="button" @onclick="() => showItemsModal = false" style="background:none; border:none; font-size: var(--mv-fs-lg); color: var(--mv-text-tertiary); cursor:pointer;">&times;</button>
+            </div>
+
+            <div style="overflow-y:auto; padding: var(--mv-space-3) var(--mv-space-4); flex:1;">
+                @if (HasUnsavedDraft())
+                {
+                    <div style="background: var(--mv-warning-bg); color: var(--mv-warning-text); padding: var(--mv-space-3); border-radius: var(--mv-radius-md); margin-bottom: var(--mv-space-3); font-size: var(--mv-fs-xs);">
+                        You have "<strong>@currentName</strong>" partly filled in and not added yet — go back and tap "Add expense" first, or it'll be left out.
+                    </div>
+                }
+                @if (expenses.Count == 0)
+                {
+                    <p style="text-align:center; color: var(--mv-text-tertiary); padding: var(--mv-space-5) 0;">Nothing added yet.</p>
+                }
+                else
+                {
+                    @foreach (var e in expenses)
+                    {
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding: var(--mv-space-3) 0; border-bottom: 1px solid var(--mv-border);">
+                            <div>
+                                <p style="margin:0; font-weight:600; font-size: var(--mv-fs-sm);">@e.Name</p>
+                                <p style="margin:2px 0 0; font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary);">@e.Category &middot; @e.Nature &middot; @FormatAmount(e.MonthlyAmount.ToString())</p>
+                            </div>
+                            <button type="button" @onclick="() => RemoveExpense(e)" style="background:none; border:none; color: var(--mv-danger); font-size: var(--mv-fs-sm); cursor:pointer;">Remove</button>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div style="padding: var(--mv-space-4); border-top: 1px solid var(--mv-border);">
+                <Button Variant="primary" IsDisabled="@(expenses.Count == 0)" OnClick="GoToStep3" Label="Continue to pathways" />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private int step = 1;
+    private string incomeInput = "0";
+    private string currentName = "";
+    private string currentCategory = "";
+    private string currentNature = "";
+    private string currentAmount = "0";
+    private bool categoryExpanded = true;
+    private bool natureExpanded = true;
+    private List<ExpenseIntake> expenses = new();
+    private List<PathwayPreview> pathways = new();
+    private bool isLoadingPathways;
+    private string? pathwayError;
+    private bool showItemsModal;
+
+    private void GoToStep2() => step = 2;
+
+    private void SelectCategory(string category)
+    {
+        currentCategory = category;
+        categoryExpanded = false;
+    }
+
+    private void SelectNature(string nature)
+    {
+        currentNature = nature;
+        natureExpanded = false;
+    }
+
+    private decimal Income => decimal.TryParse(incomeInput, out var i) ? i : 0;
+
+    private decimal CommittedSoFar =>
+        expenses.Where(e => e.Nature != "Unpriced").Sum(e => e.MonthlyAmount);
+
+    private decimal RemainingBudget => Math.Max(0, Income - CommittedSoFar);
+
+    private bool WouldExceedIncome() =>
+        currentNature != "Unpriced" &&
+        decimal.TryParse(currentAmount, out var a) && a > 0 &&
+        CommittedSoFar + a > Income;
+
+    private bool CanAddCurrentExpense() =>
+        !string.IsNullOrWhiteSpace(currentName) &&
+        !string.IsNullOrEmpty(currentCategory) &&
+        !string.IsNullOrEmpty(currentNature) &&
+        (currentNature == "Unpriced" || (decimal.TryParse(currentAmount, out var a) && a > 0)) &&
+        !WouldExceedIncome();
+
+    private bool HasUnsavedDraft() =>
+        !string.IsNullOrWhiteSpace(currentName) && !CanAddCurrentExpense();
+
+    private void AddExpense()
+    {
+        decimal amount = currentNature == "Unpriced" ? 0 : decimal.Parse(currentAmount);
+        bool reserveOnly = currentCategory == "Investment";
+        expenses.Add(new ExpenseIntake(currentName, currentCategory, currentNature, amount, reserveOnly));
+        currentName = "";
+        currentCategory = "";
+        currentNature = "";
+        currentAmount = "0";
+        categoryExpanded = true;
+        natureExpanded = true;
+    }
+
+    private void RemoveExpense(ExpenseIntake expense) =>
+        expenses = expenses.Where(e => e != expense).ToList();
+
+    private async Task GoToStep3()
+    {
+        showItemsModal = false;
+        step = 3;
+        await LoadPathways();
+    }
+
+    private async Task LoadPathways()
+    {
+        isLoadingPathways = true;
+        pathwayError = null;
+        try
+        {
+            pathways = await Api.IntakeAsync(new OnboardingIntakeRequest(decimal.Parse(incomeInput), expenses));
+        }
+        catch (ApiException ex)
+        {
+            pathwayError = ex.Message;
+        }
+        catch (Exception)
+        {
+            pathwayError = "Network error. Please check your connection.";
+        }
+        finally
+        {
+            isLoadingPathways = false;
+        }
+    }
+
+    private async Task Commit(string pathway)
+    {
+        try
+        {
+            await Api.CommitAsync(new CommitPathwayRequest(pathway));
+            Nav.NavigateTo("/dashboard");
+        }
+        catch (ApiException ex)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction(ex.Message));
+        }
+        catch (Exception)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction("Network error. Please check your connection."));
+        }
+    }
+
+    private static string FormatAmount(string raw) =>
+        decimal.TryParse(raw, out var val) ? CurrencyFormatter.Format(val) : raw;
+}

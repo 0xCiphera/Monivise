@@ -1,0 +1,30 @@
+﻿@namespace Monivise.App.Components.Atoms
+
+<button class="mv-button mv-button--@Variant"
+        @onclick="OnClick"
+        disabled="@IsDisabled"
+        type="@ButtonType">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span>@Label</span>
+    }
+    else
+    {
+        @ChildContent
+    }
+</button>
+
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string Variant { get; set; } = "primary"; // primary | secondary | ghost | danger
+    [Parameter] public bool IsDisabled { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string ButtonType { get; set; } = "button";
+    [Parameter] public string? Label { get; set; }
+
+
+
+    private Task HandleClick() => OnClick.HasDelegate ? OnClick.InvokeAsync() : Task.CompletedTask;
+}

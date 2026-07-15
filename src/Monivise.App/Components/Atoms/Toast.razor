@@ -1,0 +1,54 @@
+﻿<div class="mv-toast mv-toast--@Variant mv-slide-down" role="@(Variant == "error" ? "alert" : "status")">
+    <Icon Name="@(Variant == "error" ? "alert" : Variant == "success" ? "check" : "alert")" Size="18" />
+    <span class="mv-toast__message">@Message</span>
+    <button type="button" class="mv-toast__dismiss" aria-label="Dismiss" @onclick="OnDismiss">
+        <Icon Name="close" Size="16" />
+    </button>
+</div>
+
+<style>
+    .mv-toast {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: var(--mv-radius-md);
+        box-shadow: var(--mv-shadow-toast);
+        font-size: var(--mv-fs-sm);
+        backdrop-filter: blur(10px);
+    }
+
+    .mv-toast--success {
+        background: var(--mv-positive-bg);
+        color: var(--mv-positive-text);
+    }
+
+    .mv-toast--error {
+        background: var(--mv-danger-bg);
+        color: var(--mv-danger-text);
+    }
+
+    .mv-toast--info {
+        background: var(--mv-info-bg);
+        color: var(--mv-info-text);
+    }
+
+    .mv-toast__message {
+        flex: 1;
+    }
+
+    .mv-toast__dismiss {
+        background: none;
+        border: none;
+        color: inherit;
+        cursor: pointer;
+        min-width: 24px;
+        min-height: 24px;
+    }
+</style>
+
+@code {
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string Variant { get; set; } = "info"; // success | error | info
+    [Parameter] public EventCallback OnDismiss { get; set; }
+}

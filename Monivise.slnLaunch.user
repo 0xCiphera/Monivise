@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "Project Start",
+    "Projects": [
+      {
+        "Path": "src\\Monivise.API\\Monivise.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\Monivise.App\\Monivise.App.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

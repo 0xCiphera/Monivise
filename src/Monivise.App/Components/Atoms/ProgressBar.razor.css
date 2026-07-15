@@ -1,0 +1,7 @@
+.progress-track {
+  width: 100%;
+  border-radius: 99px;
+  background: var(--c-border);
+  overflow: hidden;
+}
+.progress-fill { border-radius: 99px; }

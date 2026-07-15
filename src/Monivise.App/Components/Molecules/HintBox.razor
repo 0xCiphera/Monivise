@@ -1,0 +1,29 @@
+﻿<div class="mv-hint">
+    <Icon Name="alert" Size="16" />
+    <p>@ChildContent</p>
+</div>
+
+<style>
+    .mv-hint {
+        display: flex;
+        gap: 8px;
+        background: var(--mv-warning-bg);
+        color: var(--mv-warning-text);
+        border-radius: var(--mv-radius-md);
+        padding: 10px 12px;
+        font-size: var(--mv-fs-xs);
+    }
+
+        .mv-hint p {
+            margin: 0;
+        }
+
+        .mv-hint svg {
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+</style>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

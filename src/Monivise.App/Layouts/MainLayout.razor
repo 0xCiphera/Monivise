@@ -1,0 +1,33 @@
+﻿@using Monivise.App.Components.Organisms
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+
+<div class="mv-shell">
+    @if (isOffline)
+    {
+        <div class="mv-offline-banner">You're offline. Changes will sync when reconnected.</div>
+    }
+    @Body
+    <ToastContainer />
+</div>
+
+@code {
+    private bool isOffline;
+    private DotNetObjectReference<MainLayout>? selfRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            selfRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("monivise.connectivity.register", selfRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnConnectivityChanged(bool online)
+    {
+        isOffline = !online;
+        StateHasChanged();
+    }
+}

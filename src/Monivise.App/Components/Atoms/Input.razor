@@ -1,0 +1,59 @@
+﻿<div class="mv-field">
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <label class="mv-field__label" for="@ElementId">@Label</label>
+    }
+    <input id="@ElementId"
+           type="@Type"
+           class="mv-field__input @(ShakeError ? "mv-shake" : "") @(HasError ? "mv-field__input--error" : "")"
+           placeholder="@Placeholder"
+           value="@Value"
+           @oninput="HandleInput"
+           inputmode="@InputMode"
+           disabled="@Disabled"
+           autocomplete="@Autocomplete"
+           aria-invalid="@HasError"
+           aria-describedby="@(HasError ? ElementId + "-error" : null)" />
+    @if (HasError)
+    {
+        <p id="@(ElementId)-error" class="mv-field__error" role="alert">@ErrorMessage</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(Help))
+    {
+        <p class="mv-field__help">@Help</p>
+    }
+</div>
+
+@code {
+    private readonly string generatedId = "f_" + Guid.NewGuid().ToString("N")[..8];
+    private string ElementId => Id ?? generatedId;
+    private bool ShakeError;
+
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public string InputMode { get; set; } = "text";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public string? Help { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Autocomplete { get; set; }
+
+    private bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
+
+    protected override void OnParametersSet()
+    {
+        if (HasError) { ShakeError = true; _ = ResetShake(); }
+    }
+
+    private async Task ResetShake()
+    {
+        await Task.Delay(350);
+        ShakeError = false;
+    }
+
+    private Task HandleInput(ChangeEventArgs e) =>
+        ValueChanged.InvokeAsync(e.Value?.ToString() ?? "");
+}

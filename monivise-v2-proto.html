@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Monivise — App Blueprint v3</title>
+<style>
+  :root {
+    --mv-bg: #f6f7f9; --mv-surface: #ffffff; --mv-border: #e4e6ea; --mv-accent: #16181d;
+    --mv-text-primary: #16181d; --mv-text-secondary: #5b606b; --mv-text-tertiary: #8b9099;
+    --mv-positive: #1d9e75; --mv-danger: #d64545; --mv-warning-bg: #fdf1e0; --mv-warning-text: #b56a13;
+    --mv-buffer: #7c5cff; --mv-buffer-bg: #efe9ff;
+    --mv-radius-sm: 8px; --mv-radius-md: 12px; --mv-radius-lg: 16px;
+    --mv-space-1: 4px; --mv-space-2: 8px; --mv-space-3: 12px; --mv-space-4: 16px;
+    --mv-space-5: 20px; --mv-space-6: 24px; --mv-space-7: 28px;
+    --mv-fs-xs: 11px; --mv-fs-sm: 13px; --mv-fs-md: 15px; --mv-fs-lg: 18px; --mv-fs-2xl: 28px;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:#2a2c31; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px 12px; }
+  .phone { width:380px; max-width:100%; background:var(--mv-bg); border-radius:32px; border:8px solid #111; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.5); display:flex; flex-direction:column; height:800px; position:relative; }
+  .statusbar { height:14px; background:var(--mv-bg); flex-shrink:0; }
+
+  /* ── LAYOUT FIX: #content and .screen now properly flex-constrained so
+     .mv-body can actually scroll internally instead of getting clipped
+     by .phone's overflow:hidden once content exceeds the fixed height. ── */
+  #content { flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+  .screen { display:none; flex-direction:column; height:100%; min-height:0; }
+  .screen.active { display:flex; }
+
+  .mv-header { padding: var(--mv-space-2) var(--mv-space-4) var(--mv-space-2); flex-shrink:0; }
+  .mv-header__brand { font-size: var(--mv-fs-xs); font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--mv-text-tertiary); margin:0; }
+  .mv-header__title { font-size: var(--mv-fs-lg); font-weight:700; margin:2px 0 0; }
+  .mv-header--sub { display:flex; align-items:center; gap: var(--mv-space-2); }
+  .mv-header--sub .back { font-size:18px; color:var(--mv-text-secondary); cursor:pointer; }
+  .mv-body { flex:1; min-height:0; overflow-y:auto; padding: 0 var(--mv-space-4) 90px; -webkit-overflow-scrolling:touch; }
+  .mv-card { background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:var(--mv-radius-lg); padding: var(--mv-space-4); margin-bottom: var(--mv-space-3); }
+  .mv-card.tap { cursor:pointer; transition:transform .1s; }
+  .mv-card.tap:active { transform:scale(.98); }
+  .mv-card--hero { background:var(--mv-accent); color:#fff; }
+  .mv-card--hero .lbl { font-size: var(--mv-fs-xs); color:#9ba0aa; margin:0 0 4px; }
+  .mv-card--hero .amount { font-size:26px; font-weight:700; margin:0; }
+  .mv-card--hero .sub { font-size: var(--mv-fs-xs); color:#9ba0aa; margin: var(--mv-space-2) 0 0; }
+  .mv-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap: var(--mv-space-2); margin-bottom: var(--mv-space-3); }
+  .mv-stat { background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:var(--mv-radius-md); padding: var(--mv-space-3); }
+  .mv-stat .lbl { font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); margin:0; }
+  .mv-stat .val { font-size: var(--mv-fs-md); font-weight:700; margin: var(--mv-space-1) 0 0; }
+  .mv-flash { animation: mv-flash 1s ease-out; }
+  @keyframes mv-flash { 0%{background:#d9fbe9;} 100%{background:transparent;} }
+  .mv-row { display:flex; justify-content:space-between; align-items:center; }
+  .mv-row .icon { font-size:20px; margin-right: var(--mv-space-3); }
+  .mv-row .name { font-weight:700; font-size: var(--mv-fs-sm); }
+  .mv-row .sub { font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); margin-top:2px; }
+  .mv-row .amt { font-size: var(--mv-fs-sm); font-weight:600; text-align:right; }
+  .mv-chev { color:var(--mv-text-tertiary); margin-left: var(--mv-space-2); }
+  .mv-bar-track { height:6px; background:var(--mv-border); border-radius:3px; margin-top: var(--mv-space-2); overflow:hidden; display:flex; }
+  .mv-bar-fill { height:100%; transition: width .3s; }
+  .mv-section-label { font-size: var(--mv-fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--mv-text-tertiary); margin: var(--mv-space-5) 0 var(--mv-space-2); }
+  .mv-item-row { background:var(--mv-surface); border:1px solid var(--mv-border); border-radius:var(--mv-radius-md); padding: var(--mv-space-3) var(--mv-space-4); margin-bottom: var(--mv-space-2); font-size: var(--mv-fs-sm); }
+  .mv-checkbox { width:22px; height:22px; border-radius:50%; border:2px solid var(--mv-border); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-size:12px; color:#fff; }
+  .mv-checkbox.paid { background:var(--mv-positive); border-color:var(--mv-positive); }
+  .mv-pill { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+  .mv-pill--buffer { background:var(--mv-buffer-bg); color:var(--mv-buffer); }
+  .mv-pill--unpriced { background:var(--mv-warning-bg); color:var(--mv-warning-text); }
+  .mv-pill--goal { background:#e5f6ef; color:var(--mv-positive); }
+  .mv-pill--muted { background:var(--mv-border); color:var(--mv-text-tertiary); }
+  .mv-btn { width:100%; border:none; border-radius:var(--mv-radius-md); padding:12px; font-size: var(--mv-fs-sm); font-weight:700; cursor:pointer; margin-top: var(--mv-space-1); }
+  .mv-btn--primary { background:var(--mv-accent); color:#fff; }
+  .mv-btn--secondary { background:var(--mv-surface); color:var(--mv-accent); border:1.5px solid var(--mv-border); }
+  .mv-btn--sm { width:auto; padding:7px 12px; font-size: var(--mv-fs-xs); }
+  .mv-btn[disabled] { opacity:.4; cursor:not-allowed; }
+  .mv-note { font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); line-height:1.5; }
+  .mv-hint { background:var(--mv-warning-bg); color:var(--mv-warning-text); border-radius:var(--mv-radius-md); padding: var(--mv-space-2) var(--mv-space-3); font-size: var(--mv-fs-xs); margin-bottom: var(--mv-space-3); display:flex; gap: var(--mv-space-2); }
+  .mv-info { position:relative; display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:var(--mv-border); color:var(--mv-text-secondary); font-size:10px; font-weight:700; cursor:pointer; margin-left:6px; flex-shrink:0; }
+  .mv-info-bubble { display:none; position:absolute; top:22px; left:0; width:220px; background:var(--mv-accent); color:#fff; padding: var(--mv-space-3); border-radius:var(--mv-radius-md); font-size: var(--mv-fs-xs); line-height:1.5; z-index:60; box-shadow:0 6px 16px rgba(0,0,0,.3); }
+  .mv-info-bubble.show { display:block; }
+  .mv-info-bubble::before { content:''; position:absolute; top:-5px; left:5px; width:10px; height:10px; background:var(--mv-accent); transform:rotate(45deg); }
+  .mv-field { margin-top: var(--mv-space-2); }
+  .mv-field__label { font-size: var(--mv-fs-xs); font-weight:700; color:var(--mv-text-primary); }
+  .mv-field__input, .mv-field__select { width:100%; border:1.5px solid var(--mv-border); border-radius:var(--mv-radius-md); padding:10px 12px; font-size: var(--mv-fs-sm); margin-top:4px; background:var(--mv-surface); }
+  .mv-field__error { color:var(--mv-danger); font-size: var(--mv-fs-xs); margin-top:4px; }
+  .mv-nav { display:flex; border-top:1px solid var(--mv-border); background:var(--mv-surface); flex-shrink:0; }
+  .mv-nav__item { flex:1; text-align:center; padding:9px 0 8px; font-size:9px; color:var(--mv-text-tertiary); cursor:pointer; }
+  .mv-nav__item.active { color:var(--mv-accent); font-weight:700; }
+  .mv-nav__item .icon { font-size:17px; display:block; margin-bottom:2px; }
+  .mv-fab { position:absolute; bottom:62px; right:16px; width:48px; height:48px; border-radius:50%; background:var(--mv-accent); color:#fff; border:none; font-size:22px; cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.3); z-index:30; }
+  .mv-sheet-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:flex-end; }
+  .mv-sheet-backdrop.active { display:flex; }
+  .mv-sheet { width:100%; background:var(--mv-surface); border-radius:20px 20px 0 0; padding: var(--mv-space-5); max-height:82%; overflow-y:auto; }
+  .mv-sheet__header { display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--mv-space-4); }
+  .mv-sheet__header p { font-weight:700; margin:0; font-size: var(--mv-fs-md); }
+  .mv-sheet__header .x { font-size:20px; color:var(--mv-text-tertiary); cursor:pointer; }
+  .mv-quick-add-opt { display:flex; align-items:center; gap: var(--mv-space-3); border:1px solid var(--mv-border); border-radius:var(--mv-radius-md); padding: var(--mv-space-3) var(--mv-space-4); margin-bottom: var(--mv-space-2); cursor:pointer; }
+  .mv-quick-add-opt .em { font-size:20px; }
+  .mv-quick-add-opt .t { font-weight:700; font-size: var(--mv-fs-sm); }
+  .mv-quick-add-opt .s { font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); }
+  .mv-tabs { display:flex; gap: var(--mv-space-2); margin-bottom: var(--mv-space-3); }
+  .mv-tabs button { flex:1; }
+  .mv-history-row { display:flex; justify-content:space-between; font-size: var(--mv-fs-xs); padding: var(--mv-space-2) 0; border-bottom:1px solid var(--mv-border); }
+  .mv-history-row:last-child { border-bottom:none; }
+  .mv-alloc-row { display:flex; align-items:center; justify-content:space-between; border:1.5px solid var(--mv-border); border-radius:var(--mv-radius-md); padding: var(--mv-space-3); margin-bottom: var(--mv-space-2); }
+  .mv-alloc-row.on { border-color:var(--mv-accent); }
+  .mv-alloc-row label { display:flex; align-items:center; gap: var(--mv-space-2); font-weight:600; font-size: var(--mv-fs-sm); cursor:pointer; }
+  .mv-alloc-row input[type=checkbox] { width:16px; height:16px; }
+  .mv-alloc-row .pct-input { width:60px; text-align:right; border:1.5px solid var(--mv-border); border-radius:8px; padding:6px 8px; font-size: var(--mv-fs-sm); }
+  .mv-alloc-total { text-align:right; font-size: var(--mv-fs-xs); font-weight:700; margin-top: var(--mv-space-2); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar"></div>
+  <div id="content">
+
+    <!-- ================= DASHBOARD ================= -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="mv-header"><p class="mv-header__brand">Monivise</p><p class="mv-header__title">Home</p></div>
+      <div class="mv-body">
+        <div class="mv-card mv-card--hero">
+          <p class="lbl">Safe to spend today</p>
+          <p class="amount" id="dashSafeToday">₦2,340</p>
+          <p class="sub" id="dashPace">On pace &middot; 18 days left this month</p>
+        </div>
+
+        <div class="mv-stat-grid">
+          <div class="mv-stat"><p class="lbl">Received this month</p><p class="val" id="statReceived">₦280,000</p></div>
+          <div class="mv-stat"><p class="lbl">Left this month</p><p class="val" id="statMonthLeft">—</p></div>
+          <div class="mv-stat"><p class="lbl">Left this week (Flexible)</p><p class="val" id="statWeekLeft">—</p></div>
+        </div>
+        <p class="mv-note" style="margin:-8px 0 var(--mv-space-3);">Both figures above use the same rule: real, spendable money only. Buffer, Investment and your Goal are deliberately left out — they exist, but they're not "extra cash."</p>
+
+        <div class="mv-card tap" onclick="go('fixed')">
+          <div class="mv-row">
+            <div style="display:flex;align-items:center;"><span class="icon">🏠</span><div><div class="name">Fixed Obligations</div><div class="sub" id="fixedSub"></div></div></div>
+            <div style="text-align:right;"><div class="amt" id="fixedAmt"></div><span class="mv-chev">›</span></div>
+          </div>
+          <div class="mv-bar-track"><div class="mv-bar-fill" id="fixedBar" style="background:var(--mv-positive);"></div></div>
+        </div>
+
+        <div class="mv-card tap" onclick="go('flexible')">
+          <div class="mv-row">
+            <div style="display:flex;align-items:center;"><span class="icon">🛒</span><div><div class="name">Flexible Spending</div><div class="sub">Transport, Food &middot; incl. buffer</div></div></div>
+            <div style="text-align:right;"><div class="amt" id="flexAmt"></div><span class="mv-chev">›</span></div>
+          </div>
+          <div class="mv-bar-track"><div class="mv-bar-fill" id="flexBar" style="background:var(--mv-positive);"></div></div>
+        </div>
+
+        <div class="mv-card tap" onclick="go('investment')">
+          <div class="mv-row">
+            <div style="display:flex;align-items:center;"><span class="icon">📈</span><div><div class="name">Investment</div><div class="sub">Pension, Naira, Dollar</div></div></div>
+            <div style="text-align:right;"><div class="amt" id="investAmt"></div><span class="mv-chev">›</span></div>
+          </div>
+          <div class="mv-bar-track"><div class="mv-bar-fill" id="investBar" style="background:var(--mv-accent);"></div></div>
+        </div>
+
+        <div class="mv-card tap" onclick="go('wants')">
+          <div class="mv-row">
+            <div style="display:flex;align-items:center;"><span class="icon">🎉</span><div><div class="name">Wants</div><div class="sub">2 priced &middot; 3 unpriced</div></div></div>
+            <div style="text-align:right;"><div class="amt" id="wantsAmt"></div><span class="mv-chev">›</span></div>
+          </div>
+          <div class="mv-bar-track"><div class="mv-bar-fill" id="wantsBar" style="background:#e0a13a;"></div></div>
+        </div>
+
+        <p class="mv-section-label">Recent activity</p>
+        <div class="mv-item-row mv-row"><div>Uber &middot; Transport</div><div>-₦2,400</div></div>
+        <div class="mv-item-row mv-row"><div>Data subscription &middot; Fixed</div><div>-₦18,000</div></div>
+      </div>
+    </div>
+
+    <!-- ================= FIXED OBLIGATIONS ================= -->
+    <div class="screen" id="screen-fixed">
+      <div class="mv-header"><div class="mv-header--sub"><span class="back" onclick="go('dashboard')">←</span><span class="mv-header__title">Fixed Obligations</span><span class="mv-info" onclick="toggleInfo(event,'info-fixed')">ⓘ<span class="mv-info-bubble" id="info-fixed">These never appear in your Weekly Review — just check them off as you pay each one.</span></span></div></div>
+      <div class="mv-body">
+        <div class="mv-card" style="text-align:left;">
+          <p class="mv-note">Outstanding this month</p>
+          <p style="font-size:26px; font-weight:700; margin:2px 0;" id="fixedOutstanding"></p>
+          <p class="mv-note" id="fixedPaidCount"></p>
+        </div>
+        <p class="mv-section-label">Items</p>
+        <div id="fixedItems"></div>
+      </div>
+    </div>
+
+    <!-- ================= FLEXIBLE SPENDING ================= -->
+    <div class="screen" id="screen-flexible">
+      <div class="mv-header"><div class="mv-header--sub"><span class="back" onclick="go('dashboard')">←</span><span class="mv-header__title">Flexible Spending</span></div></div>
+      <div class="mv-body">
+        <p class="mv-note" style="margin-bottom:12px;">Reviewed every week — surplus on any item can be swept to a goal.</p>
+        <div class="mv-card" style="background:var(--mv-buffer-bg); border-color:var(--mv-buffer-bg);">
+          <div class="mv-row"><div><span class="icon">🛟</span><span class="name" style="color:var(--mv-buffer);">Buffer</span></div><div class="amt" style="color:var(--mv-buffer);" id="bufferDetailAmt"></div></div>
+          <p class="mv-note" style="margin-top:6px;">Auto-funded from your pathway. Covers overages on any item below before anything is marked over budget.</p>
+        </div>
+        <p class="mv-section-label">This week</p>
+        <div id="flexItems"></div>
+        <button class="mv-btn mv-btn--secondary" onclick="openExpenseForm('flexible')">+ Record expense</button>
+      </div>
+    </div>
+
+    <!-- ================= INVESTMENT ================= -->
+    <div class="screen" id="screen-investment">
+      <div class="mv-header"><div class="mv-header--sub"><span class="back" onclick="go('dashboard')">←</span><span class="mv-header__title">Investment</span></div></div>
+      <div class="mv-body">
+        <p class="mv-note" style="margin-bottom:12px;">Pension, naira &amp; dollar investment. Recording a deposit deducts from the grand total and logs to history. Once an item hits its planned amount it's locked — no over-depositing.</p>
+        <div id="investItems"></div>
+        <p class="mv-section-label">History</p>
+        <div class="mv-card" style="padding: var(--mv-space-3) var(--mv-space-4);" id="investHistory"></div>
+      </div>
+    </div>
+
+    <!-- ================= WANTS ================= -->
+    <div class="screen" id="screen-wants">
+      <div class="mv-header"><div class="mv-header--sub"><span class="back" onclick="go('dashboard')">←</span><span class="mv-header__title">Wants</span></div></div>
+      <div class="mv-body">
+        <p class="mv-section-label" style="margin-top:0;">Priced categories</p>
+        <div class="mv-item-row mv-row"><div class="name">Outings</div><div>₦4,200 / ₦6,000</div></div>
+        <div class="mv-item-row mv-row"><div class="name">Gifts</div><div>₦2,000 / ₦4,000</div></div>
+        <p class="mv-section-label">Unpriced categories <span class="mv-pill mv-pill--unpriced">shared pool</span></p>
+        <div class="mv-card" style="background:var(--mv-warning-bg); border-color:var(--mv-warning-bg);">
+          <div class="mv-row"><div class="name" style="color:var(--mv-warning-text);">Unpriced pool</div><div class="amt" style="color:var(--mv-warning-text);" id="unpricedPoolAmt"></div></div>
+          <p class="mv-note" style="margin-top:6px;">Shared by: Black Tax, Dates, Things I'd like to buy. Recording an expense against any one deducts from this same pool.</p>
+        </div>
+        <div class="mv-item-row mv-row"><div class="name">Black Tax</div><span class="mv-pill mv-pill--unpriced">unpriced</span></div>
+        <div class="mv-item-row mv-row"><div class="name">Dates</div><span class="mv-pill mv-pill--unpriced">unpriced</span></div>
+        <div class="mv-item-row mv-row"><div class="name">Things I'd like to buy</div><span class="mv-pill mv-pill--unpriced">unpriced</span></div>
+        <p class="mv-section-label" style="display:flex; align-items:center;">Category rules <span class="mv-info" onclick="toggleInfo(event,'info-wants')">ⓘ<span class="mv-info-bubble" id="info-wants">Want categories are set once during onboarding. To add or change one, go to Settings → Update income &amp; expenses.</span></span></p>
+        <button class="mv-btn mv-btn--secondary" onclick="openExpenseForm('wants')">+ Record expense</button>
+      </div>
+    </div>
+
+    <!-- ================= WEEKLY REVIEW ================= -->
+    <div class="screen" id="screen-weekly">
+      <div class="mv-header"><p class="mv-header__brand">Monivise</p><p class="mv-header__title">Weekly review</p></div>
+      <div class="mv-body">
+        <div class="mv-hint" id="monthEndBanner" style="display:none;">🗓 Last week of the month — this review also includes Fixed Obligations surplus, not just Flexible/Investment/Wants.</div>
+        <p class="mv-note" style="margin-bottom:12px;">Fixed Obligations aren't normally reviewed here — except in the final week (toggle below to preview).</p>
+        <button class="mv-btn mv-btn--secondary mv-btn--sm" onclick="toggleMonthEnd()" id="monthEndToggle">Preview: Last week of month</button>
+
+        <p class="mv-section-label">Flexible Spending</p>
+        <div class="mv-item-row mv-row"><div><div class="name">Transport</div><div class="sub">Reserved ₦7,000</div></div><div>Actual ₦6,200</div></div>
+        <div class="mv-item-row mv-row"><div><div class="name">Food</div><div class="sub">Reserved ₦6,000</div></div><div>Actual ₦6,800</div></div>
+        <p class="mv-section-label">Investment</p>
+        <div class="mv-item-row mv-row"><div><div class="name">Dollar Investment</div><div class="sub">Planned ₦20,000</div></div><div style="color:var(--mv-warning-text);">Actual ₦10,000</div></div>
+        <p class="mv-section-label">Wants</p>
+        <div class="mv-item-row mv-row"><div><div class="name">Outings</div><div class="sub">Allocated ₦1,500/wk</div></div><div>Spent ₦900</div></div>
+
+        <div id="monthEndExtra" style="display:none;">
+          <p class="mv-section-label">Fixed Obligations (month-end only)</p>
+          <div class="mv-item-row mv-row"><div><div class="name">Utilities</div><div class="sub">Reserved ₦28,000</div></div><div>Actual ₦24,500</div></div>
+        </div>
+
+        <div class="mv-card mv-card--hero" style="margin-top:var(--mv-space-4);">
+          <p class="lbl">Total surplus this <span id="surplusScope">week</span></p>
+          <p class="amount" id="weeklySurplusAmt">₦0</p>
+          <p class="sub" id="weeklySurplusNote">Computed from the line items above</p>
+        </div>
+        <div class="mv-card mv-row"><div class="name">🎯 Emergency Fund</div><div class="amt" id="goalInlineAmt">₦42,000 / ₦300,000</div></div>
+        <button class="mv-btn mv-btn--primary" id="sweepBtn" onclick="sweepWeekly()">Sweep <span id="sweepBtnAmt">₦0</span> to goal</button>
+        <p class="mv-note" id="sweepConfirm" style="display:none; text-align:center; margin-top:var(--mv-space-2); color:var(--mv-positive); font-weight:700;">✓ Swept to Emergency Fund</p>
+      </div>
+    </div>
+
+    <!-- ================= GOALS ================= -->
+    <div class="screen" id="screen-goals">
+      <div class="mv-header"><p class="mv-header__brand">Monivise</p><p class="mv-header__title">Goals</p></div>
+      <div class="mv-body">
+        <div class="mv-tabs">
+          <button class="mv-btn mv-btn--primary mv-btn--sm" id="goalsTabActive" onclick="showGoalsTab('active')">Active</button>
+          <button class="mv-btn mv-btn--secondary mv-btn--sm" id="goalsTabArchived" onclick="showGoalsTab('archived')">Archived</button>
+          <button class="mv-btn mv-btn--secondary mv-btn--sm" style="flex:0 0 auto;" onclick="openSheet('newGoal')">+ New</button>
+        </div>
+        <div id="goalsActiveList">
+          <div class="mv-card">
+            <div class="mv-row"><div class="name">🎯 Emergency Fund</div><span class="mv-pill mv-pill--goal">Active</span></div>
+            <div class="mv-bar-track"><div class="mv-bar-fill" id="goalBar" style="background:var(--mv-positive);"></div></div>
+            <p class="mv-note" style="margin-top:6px;" id="goalProgressText"></p>
+          </div>
+          <div class="mv-card">
+            <div class="mv-row"><div class="name">👟 New shoes</div><span class="mv-pill mv-pill--muted">Queued</span></div>
+            <div class="mv-bar-track"><div class="mv-bar-fill" style="width:100%; background:var(--mv-positive);"></div></div>
+            <p class="mv-note" style="margin:6px 0 10px;">₦45,000 / ₦45,000 — target reached!</p>
+            <button class="mv-btn mv-btn--primary mv-btn--sm" onclick="spendGoal()">Spend it</button>
+          </div>
+        </div>
+        <div id="goalsArchivedList" style="display:none;">
+          <div class="mv-card"><div class="mv-row"><div class="name">💻 New laptop</div><span class="mv-pill mv-pill--muted">Spent &middot; Mar 2026</span></div><p class="mv-note" style="margin-top:6px;">Saved ₦280,000, spent Mar 14</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SETTINGS ================= -->
+    <div class="screen" id="screen-settings">
+      <div class="mv-header"><p class="mv-header__brand">Monivise</p><p class="mv-header__title">Settings</p></div>
+      <div class="mv-body">
+        <p class="mv-section-label" style="margin-top:0;">Account</p>
+        <div class="mv-card"><p style="font-weight:700; margin:0;">Tobiloba</p><p class="mv-note" style="margin-top:2px;">tobiloba@email.com</p></div>
+        <p class="mv-section-label">Budget</p>
+        <div class="mv-card tap" onclick="openSheet('reOnboard')">
+          <div class="mv-row"><div class="name">Update income &amp; expenses</div><span class="mv-chev">›</span></div>
+          <p class="mv-note" style="margin-top:4px;">Re-run onboarding. Applies from your next cycle — this month stays as-is.</p>
+        </div>
+        <p class="mv-section-label">Session</p>
+        <div class="mv-card tap">Log out</div>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="mv-fab" onclick="openSheet('quickAdd')">+</button>
+
+  <nav class="mv-nav" aria-label="Primary">
+    <div class="mv-nav__item active" data-tab="dashboard" onclick="go('dashboard')"><span class="icon">🏠</span>Home</div>
+    <div class="mv-nav__item" data-tab="goals" onclick="go('goals')"><span class="icon">🎯</span>Goals</div>
+    <div class="mv-nav__item" data-tab="weekly" onclick="go('weekly')"><span class="icon">📅</span>Weekly</div>
+    <div class="mv-nav__item" data-tab="settings" onclick="go('settings')"><span class="icon">⚙️</span>Settings</div>
+  </nav>
+
+  <!-- ================= SHEETS ================= -->
+  <div class="mv-sheet-backdrop" id="sheet-quickAdd" onclick="closeSheet(event,'quickAdd')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>Quick add</p><span class="x" onclick="closeSheet(null,'quickAdd')">&times;</span></div>
+      <div class="mv-quick-add-opt" onclick="closeSheet(null,'quickAdd'); openSheet('addIncome')">
+        <span class="em">💰</span><div><div class="t">Record income</div><div class="s">Salary, side income, anything coming in</div></div>
+      </div>
+      <div class="mv-quick-add-opt" onclick="closeSheet(null,'quickAdd'); openSheet('pickExpenseBucket')">
+        <span class="em">🧾</span><div><div class="t">Record expense</div><div class="s">Flexible Spending or Wants</div></div>
+      </div>
+      <div class="mv-quick-add-opt" onclick="closeSheet(null,'quickAdd'); openRecordInvestment()">
+        <span class="em">📈</span><div><div class="t">Record investment</div><div class="s">Log a deposit against a plan</div></div>
+      </div>
+      <div class="mv-quick-add-opt" onclick="closeSheet(null,'quickAdd'); go('fixed')">
+        <span class="em">🏠</span><div><div class="t">Mark a bill paid</div><div class="s">Fixed Obligations checklist</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mv-sheet-backdrop" id="sheet-pickExpenseBucket" onclick="closeSheet(event,'pickExpenseBucket')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>Which bucket?</p><span class="x" onclick="closeSheet(null,'pickExpenseBucket')">&times;</span></div>
+      <div class="mv-quick-add-opt" onclick="closeSheet(null,'pickExpenseBucket'); openExpenseForm('flexible')">
+        <span class="em">🛒</span><div><div class="t">Flexible Spending</div><div class="s">Transport, Food, etc.</div></div>
+      </div>
+      <div class="mv-quick-add-opt" onclick="closeSheet(null,'pickExpenseBucket'); openExpenseForm('wants')">
+        <span class="em">🎉</span><div><div class="t">Wants</div><div class="s">Outings, Gifts, unpriced categories</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mv-sheet-backdrop" id="sheet-addIncome" onclick="closeSheet(event,'addIncome')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>Record income</p><span class="x" onclick="closeSheet(null,'addIncome')">&times;</span></div>
+      <div class="mv-tabs" style="margin-bottom:0;">
+        <button class="mv-btn mv-btn--primary mv-btn--sm" id="incTabPrimary" onclick="showIncomeTab('primary')">Primary</button>
+        <button class="mv-btn mv-btn--secondary mv-btn--sm" id="incTabExtra" onclick="showIncomeTab('extra')">Extra</button>
+      </div>
+      <div id="incomePrimary">
+        <div class="mv-card" style="margin-top:var(--mv-space-4);"><p class="mv-note">Your base salary, set during onboarding</p><p style="font-size:22px; font-weight:700; margin:4px 0 0;">₦280,000</p></div>
+        <p class="mv-note" style="margin:var(--mv-space-3) 0;">No typing needed — this splits across Fixed Obligations, Flexible Spending, Investment and Wants exactly like onboarding did.</p>
+        <button class="mv-btn mv-btn--primary" onclick="closeSheet(null,'addIncome')">Confirm — I got paid</button>
+      </div>
+      <div id="incomeExtra" style="display:none;">
+        <div class="mv-field"><label class="mv-field__label">Amount</label><input class="mv-field__input" type="number" id="extraAmt" value="35000" oninput="renderAllocRemaining()"></div>
+
+        <p class="mv-section-label" style="margin-top:var(--mv-space-4); display:flex; align-items:center;">Where should it go? <span class="mv-info" onclick="toggleInfo(event,'info-extra')">ⓘ<span class="mv-info-bubble" id="info-extra">Fixed Obligations and Investment are never touched by extra income — pick from Buffer, unpriced Wants, and your active Goal only.</span></span></p>
+        <p class="mv-note" style="margin-bottom:var(--mv-space-3);">Pick one or more, then split the percentage between them.</p>
+
+        <div class="mv-alloc-row" id="allocRowBuffer">
+          <label><input type="checkbox" id="allocBufferOn" checked onchange="onAllocToggle()"> 🛟 Buffer</label>
+          <input type="number" class="pct-input" id="allocBufferPct" value="50" min="0" max="100" oninput="renderAllocRemaining()">
+        </div>
+        <div class="mv-alloc-row" id="allocRowWants">
+          <label><input type="checkbox" id="allocWantsOn" checked onchange="onAllocToggle()"> 🎉 Unpriced Wants</label>
+          <input type="number" class="pct-input" id="allocWantsPct" value="30" min="0" max="100" oninput="renderAllocRemaining()">
+        </div>
+        <div class="mv-alloc-row" id="allocRowGoal">
+          <label><input type="checkbox" id="allocGoalOn" checked onchange="onAllocToggle()"> 🎯 Active Goal</label>
+          <input type="number" class="pct-input" id="allocGoalPct" value="20" min="0" max="100" oninput="renderAllocRemaining()">
+        </div>
+        <p class="mv-alloc-total" id="allocTotal">Total: 100% ✓</p>
+        <div class="mv-field__error" id="allocError" style="display:none;">Percentages must add up to exactly 100%.</div>
+        <button class="mv-btn mv-btn--primary" id="applyExtraBtn" style="margin-top:var(--mv-space-3);" onclick="applyExtraIncome()">Add extra income</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mv-sheet-backdrop" id="sheet-expenseFlexible" onclick="closeSheet(event,'expenseFlexible')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>Record expense — Flexible</p><span class="x" onclick="closeSheet(null,'expenseFlexible')">&times;</span></div>
+      <div class="mv-field">
+        <label class="mv-field__label">Item</label>
+        <select class="mv-field__select" id="flexItemSelect">
+          <option value="Transport">Transport — ₦2,800 left this week</option>
+          <option value="Food">Food — buffer already in use</option>
+        </select>
+      </div>
+      <div class="mv-field"><label class="mv-field__label">Amount</label><input class="mv-field__input" type="number" id="flexExpenseAmt" placeholder="0" value="1200"></div>
+      <button class="mv-btn mv-btn--primary" style="margin-top:var(--mv-space-3);" onclick="confirmFlexExpense()">Confirm spend</button>
+    </div>
+  </div>
+
+  <div class="mv-sheet-backdrop" id="sheet-expenseWants" onclick="closeSheet(event,'expenseWants')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>Record expense — Wants</p><span class="x" onclick="closeSheet(null,'expenseWants')">&times;</span></div>
+      <div class="mv-field"><label class="mv-field__label">Description</label><input class="mv-field__input" type="text" placeholder="e.g. Birthday gift for a friend"></div>
+      <div class="mv-field">
+        <label class="mv-field__label">Category</label>
+        <select class="mv-field__select" id="wantCategorySelect">
+          <option>Outings (priced) — ₦1,800 left</option>
+          <option>Gifts (priced) — ₦2,000 left</option>
+          <option>Black Tax (unpriced — shared pool)</option>
+          <option>Dates (unpriced — shared pool)</option>
+          <option>Things I'd like to buy (unpriced — shared pool)</option>
+        </select>
+      </div>
+      <div class="mv-field"><label class="mv-field__label">Amount</label><input class="mv-field__input" type="number" id="wantExpenseAmt" placeholder="0" value="1500"></div>
+      <button class="mv-btn mv-btn--primary" style="margin-top:var(--mv-space-3);" onclick="confirmWantExpense()">Confirm spend</button>
+    </div>
+  </div>
+
+  <div class="mv-sheet-backdrop" id="sheet-recordInvestment" onclick="closeSheet(event,'recordInvestment')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>Record investment</p><span class="x" onclick="closeSheet(null,'recordInvestment')">&times;</span></div>
+      <div class="mv-field">
+        <label class="mv-field__label">Which one?</label>
+        <select class="mv-field__select" id="investItemSelect" onchange="onInvestItemChange()"></select>
+      </div>
+      <div class="mv-field"><label class="mv-field__label">Amount deposited</label><input class="mv-field__input" type="number" id="investAmtInput" placeholder="0" value="5000" oninput="validateInvestAmt()"></div>
+      <p class="mv-note" id="investRemainingNote" style="margin-top:var(--mv-space-2);"></p>
+      <div class="mv-field__error" id="investError" style="display:none;"></div>
+      <button class="mv-btn mv-btn--primary" id="confirmInvestBtn" style="margin-top:var(--mv-space-3);" onclick="confirmInvestment()">Confirm deposit</button>
+    </div>
+  </div>
+
+  <div class="mv-sheet-backdrop" id="sheet-newGoal" onclick="closeSheet(event,'newGoal')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>New goal</p><span class="x" onclick="closeSheet(null,'newGoal')">&times;</span></div>
+      <div class="mv-field"><label class="mv-field__label">Name</label><input class="mv-field__input" type="text" placeholder="e.g. New laptop"></div>
+      <div class="mv-field"><label class="mv-field__label">Target amount</label><input class="mv-field__input" type="number" placeholder="0"></div>
+      <button class="mv-btn mv-btn--primary" style="margin-top:var(--mv-space-3);" onclick="closeSheet(null,'newGoal')">Create goal</button>
+    </div>
+  </div>
+
+  <div class="mv-sheet-backdrop" id="sheet-reOnboard" onclick="closeSheet(event,'reOnboard')">
+    <div class="mv-sheet" onclick="event.stopPropagation()">
+      <div class="mv-sheet__header"><p>Update income &amp; expenses</p><span class="x" onclick="closeSheet(null,'reOnboard')">&times;</span></div>
+      <p class="mv-note">You'll go through intake again. Your current cycle keeps running on the old numbers until it ends; the new setup takes over next cycle.</p>
+      <button class="mv-btn mv-btn--primary" style="margin-top:var(--mv-space-3);" onclick="window.location.href='monivise-v2-onboarding.html'">Continue to onboarding</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const state = {
+  buffer: 4160,
+  fixed: { items: [
+      { name:"Rent", amt:150000, paid:true }, { name:"Data", amt:18000, paid:true },
+      { name:"Netflix", amt:5000, paid:false }, { name:"Gym membership", amt:15000, paid:false },
+      { name:"Utilities", amt:28000, paid:false, reservedForReview:28000 },
+  ]},
+  flexible: { items: [
+      { name:"Transport", weeklyBudget:7000, weeklySpent:6200 },
+      { name:"Food", weeklyBudget:6000, weeklySpent:6800 },
+  ], monthlyTotal:52000 },
+  investment: { items: [
+      { name:"Pension", planned:10000, actual:10000 },
+      { name:"Naira Investment", planned:20000, actual:20000 },
+      { name:"Dollar Investment", planned:20000, actual:10000 },
+  ], history: [
+      { name:"Pension", amt:10000, date:"Jul 1" },
+      { name:"Naira Investment", amt:20000, date:"Jul 1" },
+      { name:"Dollar Investment", amt:10000, date:"Jul 3" },
+  ]},
+  wants: { pricedItems:[{name:"Outings", spent:4200, total:6000, weeklyAllocated:1500, weeklySpent:900},{name:"Gifts", spent:2000, total:4000}],
+           unpricedTotal: 3600, unpricedPool: 3600 },
+  goal: { name:"Emergency Fund", current:42000, target:300000 },
+  received: 280000,
+  weeklySwept: false,
+};
+
+function fmt(n){ return '₦'+Math.round(n).toLocaleString('en-NG'); }
+
+function renderAll(){
+  renderFixed(); renderFlexible(); renderInvestment(); renderWants();
+  renderDashboardStats(); renderGoal(); renderWeeklySurplus();
+}
+
+// "Left this month" now uses the SAME philosophy as "Safe to spend today":
+// only count money still available for everyday spending. Buffer (emergency-only),
+// Investment (already committed) and Goal (deliberately not "extra cash") are
+// excluded — Unpriced Wants pool IS included since it's real, spendable money,
+// just occasional rather than daily.
+function computeMonthLeft(){
+  const fixedRemaining = state.fixed.items.filter(i=>!i.paid).reduce((s,i)=>s+i.amt,0);
+  const flexRemaining = state.flexible.items.reduce((s,i)=>s+Math.max(0,i.weeklyBudget-i.weeklySpent),0);
+  const wantsPricedRemaining = state.wants.pricedItems.reduce((s,i)=>s+Math.max(0,i.total-i.spent),0);
+  const unpricedRemaining = state.wants.unpricedPool;
+  return fixedRemaining + flexRemaining + wantsPricedRemaining + unpricedRemaining;
+}
+
+// ── Safe to spend today deliberately excludes Buffer and Unpriced Wants —
+// those are reserves/occasional money, not everyday spending, and showing
+// them here would inflate what feels "safe" to spend right now. ──
+const daysLeftInWeek = 4;
+function computeSafeToday(){
+  const weekLeft = state.flexible.items.reduce((s,i)=>s+Math.max(0,i.weeklyBudget-i.weeklySpent),0);
+  return Math.round(weekLeft / daysLeftInWeek);
+}
+
+function renderDashboardStats(){
+  document.getElementById('statReceived').textContent = fmt(state.received);
+  document.getElementById('statMonthLeft').textContent = fmt(computeMonthLeft());
+  const weekLeft = state.flexible.items.reduce((s,i)=>s+Math.max(0,i.weeklyBudget-i.weeklySpent),0);
+  document.getElementById('statWeekLeft').textContent = fmt(weekLeft);
+  document.getElementById('dashSafeToday').textContent = fmt(computeSafeToday());
+  document.getElementById('dashPace').textContent = `${fmt(weekLeft)} left this week &middot; ${daysLeftInWeek} days to go`.replace('&middot;','·');
+}
+
+function renderFixed(){
+  const list = document.getElementById('fixedItems'); list.innerHTML = '';
+  let outstanding=0, paidCount=0;
+  state.fixed.items.forEach((item,i)=>{
+    if(!item.paid) outstanding+=item.amt; else paidCount++;
+    const row = document.createElement('div');
+    row.className='mv-item-row mv-row';
+    row.innerHTML = `<div><div class="name">${item.name}</div><div class="sub">${fmt(item.amt)}/mo</div></div>
+      <div class="mv-checkbox ${item.paid?'paid':''}" onclick="togglePaid(${i})">${item.paid?'✓':''}</div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('fixedOutstanding').textContent = fmt(outstanding);
+  document.getElementById('fixedPaidCount').textContent = `${paidCount} of ${state.fixed.items.length} marked paid`;
+  document.getElementById('fixedSub').textContent = `${paidCount} of ${state.fixed.items.length} paid this month`;
+  document.getElementById('fixedAmt').textContent = fmt(outstanding)+' left';
+  document.getElementById('fixedBar').style.width = (paidCount/state.fixed.items.length*100)+'%';
+}
+function togglePaid(i){ state.fixed.items[i].paid = !state.fixed.items[i].paid; renderAll(); }
+
+function renderFlexible(){
+  document.getElementById('bufferDetailAmt').textContent = fmt(state.buffer)+' available';
+  const list = document.getElementById('flexItems'); list.innerHTML='';
+  let totalSpent = 0;
+  state.flexible.items.forEach(item=>{
+    totalSpent += item.weeklySpent;
+    const usedBuffer = item.weeklySpent > item.weeklyBudget;
+    const pct = Math.min(100, item.weeklySpent/item.weeklyBudget*100);
+    const overPct = usedBuffer ? Math.min(20,(item.weeklySpent-item.weeklyBudget)/item.weeklyBudget*100) : 0;
+    const row = document.createElement('div');
+    row.className='mv-item-row';
+    row.innerHTML = `<div class="mv-row"><div class="name">${item.name}</div>
+      <div class="amt" style="${usedBuffer?'color:var(--mv-danger);':''}">${fmt(item.weeklySpent)} / ${fmt(item.weeklyBudget)} ${usedBuffer?'<span class="mv-pill mv-pill--buffer">used buffer</span>':''}</div></div>
+      <div class="mv-bar-track"><div class="mv-bar-fill" style="width:${pct}%; background:var(--mv-positive);"></div>${overPct?`<div class="mv-bar-fill" style="width:${overPct}%; background:var(--mv-buffer);"></div>`:''}</div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('flexAmt').textContent = fmt(totalSpent)+' / '+fmt(state.flexible.monthlyTotal);
+  document.getElementById('flexBar').style.width = Math.min(100,totalSpent/state.flexible.monthlyTotal*100)+'%';
+}
+
+function renderInvestment(){
+  const list = document.getElementById('investItems'); list.innerHTML='';
+  let totalPlanned=0, totalActual=0;
+  state.investment.items.forEach(item=>{
+    totalPlanned+=item.planned; totalActual+=item.actual;
+    const short = item.actual < item.planned;
+    const complete = item.actual >= item.planned;
+    const row = document.createElement('div');
+    row.className='mv-item-row mv-row';
+    row.innerHTML = `<div class="name">${item.name}</div><div class="amt" style="${short?'color:var(--mv-warning-text);':''}">${fmt(item.actual)} / ${fmt(item.planned)} ${complete?'✓ locked':''}</div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('investAmt').textContent = fmt(totalActual)+' / '+fmt(totalPlanned);
+  document.getElementById('investBar').style.width = (totalActual/totalPlanned*100)+'%';
+
+  const hist = document.getElementById('investHistory');
+  hist.innerHTML = state.investment.history.map(h=>
+    `<div class="mv-history-row"><span>${h.name} &middot; ${h.date}</span><span>${fmt(h.amt)}</span></div>`
+  ).join('') || '<p class="mv-note">No deposits logged yet.</p>';
+}
+
+function renderWants(){
+  document.getElementById('unpricedPoolAmt').textContent = fmt(state.wants.unpricedPool)+' left';
+  const pricedSpent = state.wants.pricedItems.reduce((s,i)=>s+i.spent,0);
+  const pricedTotal = state.wants.pricedItems.reduce((s,i)=>s+i.total,0);
+  document.getElementById('wantsAmt').textContent = fmt(pricedSpent)+' / '+fmt(pricedTotal);
+  document.getElementById('wantsBar').style.width = (pricedSpent/pricedTotal*100)+'%';
+}
+
+function renderGoal(){
+  const pct = Math.min(100, state.goal.current/state.goal.target*100);
+  document.getElementById('goalBar').style.width = pct+'%';
+  const txt = fmt(state.goal.current)+' / '+fmt(state.goal.target);
+  document.getElementById('goalProgressText').textContent = txt;
+  document.getElementById('goalInlineAmt').textContent = txt;
+}
+
+// ── Weekly surplus now computed from the actual line items, not hardcoded ──
+function computeWeeklySurplus(monthEnd){
+  const flexSurplus = state.flexible.items.reduce((s,i)=>s + (i.weeklyBudget - i.weeklySpent), 0); // can be negative
+  const investShortfall = state.investment.items.reduce((s,i)=> s + Math.max(0, i.planned - i.actual), 0);
+  const wantsSurplus = state.wants.pricedItems.filter(i=>i.weeklyAllocated!=null)
+    .reduce((s,i)=> s + (i.weeklyAllocated - i.weeklySpent), 0);
+  let total = flexSurplus + investShortfall + wantsSurplus;
+  if (monthEnd) {
+    const fixedSurplus = state.fixed.items.filter(i=>i.reservedForReview)
+      .reduce((s,i)=> s + (i.reservedForReview - (i.paid?i.amt:24500)), 0); // 24500 = demo actual spend
+    total += fixedSurplus;
+  }
+  return Math.max(0, Math.round(total));
+}
+
+let monthEndMode = false;
+function renderWeeklySurplus(){
+  const amt = computeWeeklySurplus(monthEndMode);
+  document.getElementById('weeklySurplusAmt').textContent = fmt(amt);
+  document.getElementById('sweepBtnAmt').textContent = fmt(amt);
+  document.getElementById('surplusScope').textContent = monthEndMode ? 'month' : 'week';
+  document.getElementById('weeklySurplusNote').textContent = monthEndMode
+    ? 'Flexible + Investment + Wants + Fixed Obligations surplus'
+    : 'Flexible + Investment + Wants surplus';
+  document.getElementById('sweepBtn').style.display = state.weeklySwept ? 'none' : 'block';
+  document.getElementById('sweepConfirm').style.display = state.weeklySwept ? 'block' : 'none';
+}
+
+function toggleMonthEnd(){
+  monthEndMode = !monthEndMode;
+  document.getElementById('monthEndBanner').style.display = monthEndMode ? 'flex' : 'none';
+  document.getElementById('monthEndExtra').style.display = monthEndMode ? 'block' : 'none';
+  renderWeeklySurplus();
+}
+
+function sweepWeekly(){
+  const amt = computeWeeklySurplus(monthEndMode);
+  state.goal.current += amt;
+  state.weeklySwept = true;
+  renderGoal();
+  renderWeeklySurplus();
+}
+
+// ── Extra income: user-driven allocation across Buffer / Wants / Goal ──
+function onAllocToggle(){
+  ['Buffer','Wants','Goal'].forEach(k=>{
+    const on = document.getElementById('alloc'+k+'On').checked;
+    document.getElementById('allocRow'+k).classList.toggle('on', on);
+    document.getElementById('alloc'+k+'Pct').disabled = !on;
+    if(!on) document.getElementById('alloc'+k+'Pct').value = 0;
+  });
+  renderAllocRemaining();
+}
+function renderAllocRemaining(){
+  const total = ['Buffer','Wants','Goal'].reduce((s,k)=>{
+    const on = document.getElementById('alloc'+k+'On').checked;
+    return s + (on ? Number(document.getElementById('alloc'+k+'Pct').value||0) : 0);
+  },0);
+  const totalEl = document.getElementById('allocTotal');
+  const errEl = document.getElementById('allocError');
+  const btn = document.getElementById('applyExtraBtn');
+  const valid = total === 100;
+  totalEl.textContent = `Total: ${total}%` + (valid ? ' ✓' : '');
+  totalEl.style.color = valid ? 'var(--mv-positive)' : 'var(--mv-danger)';
+  errEl.style.display = valid ? 'none' : 'block';
+  btn.disabled = !valid;
+}
+function showIncomeTab(tab){
+  document.getElementById('incomePrimary').style.display = tab==='primary'?'block':'none';
+  document.getElementById('incomeExtra').style.display = tab==='extra'?'block':'none';
+  document.getElementById('incTabPrimary').className = 'mv-btn mv-btn--sm '+(tab==='primary'?'mv-btn--primary':'mv-btn--secondary');
+  document.getElementById('incTabExtra').className = 'mv-btn mv-btn--sm '+(tab==='extra'?'mv-btn--primary':'mv-btn--secondary');
+  if(tab==='extra') renderAllocRemaining();
+}
+function applyExtraIncome(){
+  const amt = Number(document.getElementById('extraAmt').value) || 0;
+  state.received += amt; // extra income is still income — total received must reflect it
+  const results = [];
+  if(document.getElementById('allocBufferOn').checked){
+    const add = Math.round(amt * Number(document.getElementById('allocBufferPct').value)/100);
+    state.buffer += add; results.push('Buffer: '+fmt(add));
+  }
+  if(document.getElementById('allocWantsOn').checked){
+    const add = Math.round(amt * Number(document.getElementById('allocWantsPct').value)/100);
+    state.wants.unpricedPool += add; state.wants.unpricedTotal += add; results.push('Unpriced Wants: '+fmt(add));
+  }
+  if(document.getElementById('allocGoalOn').checked){
+    const add = Math.round(amt * Number(document.getElementById('allocGoalPct').value)/100);
+    state.goal.current += add; results.push('Emergency Fund: '+fmt(add));
+  }
+  renderAll();
+  closeSheet(null,'addIncome');
+  alert(fmt(amt)+' added:\\n'+results.join('\\n'));
+}
+
+function openExpenseForm(bucket){ openSheet(bucket==='flexible'?'expenseFlexible':'expenseWants'); }
+function confirmFlexExpense(){
+  const name = document.getElementById('flexItemSelect').value;
+  const amt = Number(document.getElementById('flexExpenseAmt').value)||0;
+  const item = state.flexible.items.find(i=>i.name===name);
+  const remaining = item.weeklyBudget - item.weeklySpent;
+  if(amt > remaining && state.buffer > 0){
+    const fromBuffer = Math.min(state.buffer, amt - Math.max(0,remaining));
+    state.buffer -= fromBuffer;
+  }
+  item.weeklySpent += amt;
+  renderAll(); closeSheet(null,'expenseFlexible');
+}
+function confirmWantExpense(){
+  const cat = document.getElementById('wantCategorySelect').value;
+  const amt = Number(document.getElementById('wantExpenseAmt').value)||0;
+  if(cat.includes('unpriced')){
+    state.wants.unpricedPool = Math.max(0, state.wants.unpricedPool - amt);
+  } else {
+    const name = cat.split(' (')[0];
+    const item = state.wants.pricedItems.find(i=>i.name===name);
+    if(item) item.spent += amt;
+  }
+  renderAll(); closeSheet(null,'expenseWants');
+}
+
+// ── Investment safety: locked items excluded from picker; amount capped to headroom ──
+function openRecordInvestment(){
+  const sel = document.getElementById('investItemSelect');
+  const incomplete = state.investment.items.filter(i => i.actual < i.planned);
+  sel.innerHTML = incomplete.length
+    ? incomplete.map(i => `<option value="${i.name}">${i.name} — ${fmt(i.actual)} of ${fmt(i.planned)} planned</option>`).join('')
+    : '<option value="">All investment items are fully funded this cycle</option>';
+  openSheet('recordInvestment');
+  onInvestItemChange();
+}
+function onInvestItemChange(){ validateInvestAmt(); }
+function currentInvestHeadroom(){
+  const name = document.getElementById('investItemSelect').value;
+  const item = state.investment.items.find(i=>i.name===name);
+  return item ? item.planned - item.actual : 0;
+}
+function validateInvestAmt(){
+  const headroom = currentInvestHeadroom();
+  const input = document.getElementById('investAmtInput');
+  const amt = Number(input.value)||0;
+  const errEl = document.getElementById('investError');
+  const btn = document.getElementById('confirmInvestBtn');
+  document.getElementById('investRemainingNote').textContent = headroom > 0
+    ? `₦${headroom.toLocaleString('en-NG')} left before this item is fully funded.`
+    : 'This item is fully funded — nothing left to deposit.';
+  if(amt > headroom){
+    errEl.textContent = `Can't deposit more than the ₦${headroom.toLocaleString('en-NG')} still needed.`;
+    errEl.style.display='block'; btn.disabled = true;
+  } else {
+    errEl.style.display='none'; btn.disabled = headroom <= 0;
+  }
+}
+function confirmInvestment(){
+  const name = document.getElementById('investItemSelect').value;
+  const amt = Number(document.getElementById('investAmtInput').value)||0;
+  const item = state.investment.items.find(i=>i.name===name);
+  if(!item || amt > (item.planned-item.actual)) return; // hard stop, mirrors server-side check we'd add for real
+  item.actual += amt;
+  state.investment.history.unshift({name, amt, date:'Today'});
+  renderAll(); closeSheet(null,'recordInvestment');
+}
+
+function spendGoal(){ alert('New shoes marked as spent and moved to Archive.'); showGoalsTab('active'); }
+function showGoalsTab(tab){
+  document.getElementById('goalsActiveList').style.display = tab==='active'?'block':'none';
+  document.getElementById('goalsArchivedList').style.display = tab==='archived'?'block':'none';
+  document.getElementById('goalsTabActive').className = 'mv-btn mv-btn--sm '+(tab==='active'?'mv-btn--primary':'mv-btn--secondary');
+  document.getElementById('goalsTabArchived').className = 'mv-btn mv-btn--sm '+(tab==='archived'?'mv-btn--primary':'mv-btn--secondary');
+}
+
+function go(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelectorAll('.mv-nav__item').forEach(t=>t.classList.remove('active'));
+  const tab = document.querySelector(`.mv-nav__item[data-tab="${screen}"]`);
+  if(tab) tab.classList.add('active');
+}
+function openSheet(name){ document.getElementById('sheet-'+name).classList.add('active'); }
+function closeSheet(e,name){ document.getElementById('sheet-'+name).classList.remove('active'); }
+
+function toggleInfo(e, id){
+  e.stopPropagation();
+  document.querySelectorAll('.mv-info-bubble').forEach(b=>{ if(b.id!==id) b.classList.remove('show'); });
+  document.getElementById(id).classList.toggle('show');
+}
+document.addEventListener('click', ()=>document.querySelectorAll('.mv-info-bubble').forEach(b=>b.classList.remove('show')));
+
+renderAll();
+</script>
+
+</body>
+</html>

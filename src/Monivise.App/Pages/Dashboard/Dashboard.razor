@@ -1,0 +1,98 @@
+@page "/dashboard"
+@layout AppShell
+@attribute [Authorize]
+@inherits FluxorComponent
+@inject IState<AppState> AppState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Nav
+
+@if (AppState.Value.IsLoading && AppState.Value.Dashboard is null)
+{
+    <div class="mv-card mv-card--hero" style="animation: mv-pulse 1.4s ease-in-out infinite;">
+        <div style="height:12px; width:90px; background:var(--mv-border); border-radius:4px; margin-bottom: var(--mv-space-2);"></div>
+        <div style="height:28px; width:160px; background:var(--mv-border); border-radius:4px;"></div>
+        <div style="height:10px; width:120px; background:var(--mv-border); border-radius:4px; margin-top: var(--mv-space-2);"></div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--mv-space-3); margin-top: var(--mv-space-3);">
+        @for (int i = 0; i < 2; i++)
+        {
+            <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3); animation: mv-pulse 1.4s ease-in-out infinite;">
+                <div style="height:10px; width:50px; background:var(--mv-border); border-radius:4px;"></div>
+                <div style="height:18px; width:80px; background:var(--mv-border); border-radius:4px; margin-top: var(--mv-space-2);"></div>
+            </div>
+        }
+    </div>
+
+    <div style="height:14px; width:70px; background:var(--mv-border); border-radius:4px; margin: var(--mv-space-5) 0 var(--mv-space-2);"></div>
+    @for (int i = 0; i < 3; i++)
+    {
+        <div style="height:56px; background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); margin-bottom: var(--mv-space-2); animation: mv-pulse 1.4s ease-in-out infinite;"></div>
+    }
+}
+else if (AppState.Value.Dashboard is null)
+{
+    <div class="mv-card" style="text-align:center;">
+        <p style="font-weight:600; margin:0 0 4px;">No active cycle</p>
+        <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-secondary); margin:0 0 var(--mv-space-4);">Start a cycle to see your safe-to-spend amount.</p>
+        <Button Variant="primary" OnClick='() => Nav.NavigateTo("/onboarding")'>Start cycle</Button>
+    </div>
+}
+else
+{
+    var d = AppState.Value.Dashboard;
+    <div class="mv-card mv-card--hero mv-scale-in">
+        <p class="mv-card__label" style="font-size: var(--mv-fs-xs); margin:0 0 var(--mv-space-1);">Safe to spend</p>
+        <p style="font-size: var(--mv-fs-2xl); font-weight:600; margin:0;">@CurrencyFormatter.Format(d.SafeToSpend)</p>
+        <p class="mv-card__label" style="font-size: var(--mv-fs-xs); margin: var(--mv-space-2) 0 0;">@CurrencyFormatter.Format(d.DailyLimit)/day &middot; @d.PaceLabel</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--mv-space-3); margin-top: var(--mv-space-3);">
+        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3);">
+            <p style="font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); margin:0;">Income</p>
+            <p style="font-size: var(--mv-fs-md); font-weight:600; margin: var(--mv-space-1) 0 0;">@CurrencyFormatter.Format(d.TotalIncome)</p>
+        </div>
+        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3);">
+            <p style="font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); margin:0;">Spent</p>
+            <p style="font-size: var(--mv-fs-md); font-weight:600; margin: var(--mv-space-1) 0 0;">@CurrencyFormatter.Format(d.TotalSpent)</p>
+        </div>
+    </div>
+
+    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-2);">Buckets</p>
+    @if (d.Buckets.Count == 0)
+    {
+        <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary);">No buckets yet.</p>
+    }
+    else
+    {
+        <div style="display:flex; flex-direction:column; gap: var(--mv-space-2);">
+            @foreach (var bucket in d.Buckets)
+            {
+                <BucketRow Bucket="bucket" OnSelect='b => Nav.NavigateTo($"/simulator?bucket={b.Id}")' />
+            }
+        </div>
+    }
+
+    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-2);">Recent activity</p>
+    @if (d.Transactions.Count == 0)
+    {
+        <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary);">No transactions yet.</p>
+    }
+    else
+    {
+        <div class="mv-card">
+            @foreach (var tx in d.Transactions.Take(5))
+            {
+                <TransactionRow Tx="tx" />
+            }
+        </div>
+    }
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dispatcher.Dispatch(new LoadDashboardAction());
+    }
+}
