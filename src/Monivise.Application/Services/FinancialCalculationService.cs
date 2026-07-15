@@ -118,7 +118,7 @@ namespace Monivise.Application.Services
 
         // ─── DECISION SIMULATION ───
 
-        public DecisionSimulationResult SimulateDecision(Guid bucketId, Guid? intakeItemId, Guid? wantCategoryId,
+        public DecisionSimulationResult SimulateDecision(Guid bucketId, Guid? intakeItemId, WantCategory? wantCategory,
     decimal amount, IEnumerable<Bucket> buckets, IEnumerable<Transaction> txns, BudgetCycle cycle)
         {
             var txnList = txns.ToList();
@@ -134,20 +134,44 @@ namespace Monivise.Application.Services
 
             // ── Item-level check, when the caller targets a specific item ──
             bool willDrawFromBuffer = false;
+            bool willDrawFromPool = false;
             decimal bufferDrawAmount = 0m;
+            decimal poolDrawAmount = 0m;
             decimal bufferBalanceAfter = cycle.BufferBalance;
+            decimal poolBalanceAfter = cycle.UnpricedWantsPoolBalance;
 
-            if (intakeItemId is not null || wantCategoryId is not null)
+            if (wantCategory is not null && wantCategory.IsUnpriced)
+            {
+                if (amount > cycle.UnpricedWantsPoolBalance)
+                {
+                    // Pool alone can't cover it — the shortfall falls to Buffer.
+                    decimal poolPortion = Math.Max(0, cycle.UnpricedWantsPoolBalance);
+                    decimal bufferPortion = amount - poolPortion;
+                    willDrawFromPool = poolPortion > 0;
+                    poolDrawAmount = poolPortion;
+                    poolBalanceAfter = cycle.UnpricedWantsPoolBalance - poolPortion;
+                    willDrawFromBuffer = true;
+                    bufferDrawAmount = bufferPortion;
+                    bufferBalanceAfter = cycle.BufferBalance - bufferPortion;
+                }
+                else
+                {
+                    willDrawFromPool = true;
+                    poolDrawAmount = amount;
+                    poolBalanceAfter = cycle.UnpricedWantsPoolBalance - amount;
+                }
+            }
+            else if (intakeItemId is not null || (wantCategory is not null && !wantCategory.IsUnpriced))
             {
                 decimal itemAllocated = txnList
                     .Where(t => t.Kind == TransactionKind.Income
                         && ((intakeItemId is not null && t.IntakeItemId == intakeItemId)
-                            || (wantCategoryId is not null && t.WantCategoryId == wantCategoryId)))
+                            || (wantCategory is not null && t.WantCategoryId == wantCategory.Id)))
                     .Sum(t => t.Amount);
                 decimal itemSpent = txnList
                     .Where(t => t.Kind == TransactionKind.Expense
                         && ((intakeItemId is not null && t.IntakeItemId == intakeItemId)
-                            || (wantCategoryId is not null && t.WantCategoryId == wantCategoryId)))
+                            || (wantCategory is not null && t.WantCategoryId == wantCategory.Id)))
                     .Sum(t => t.Amount);
                 decimal itemRemaining = itemAllocated - itemSpent;
 
@@ -156,7 +180,7 @@ namespace Monivise.Application.Services
                     decimal shortfall = amount - Math.Max(0, itemRemaining);
                     willDrawFromBuffer = true;
                     bufferDrawAmount = shortfall;
-                    bufferBalanceAfter = cycle.BufferBalance - shortfall; // may go negative — surfaced to caller, not clamped here
+                    bufferBalanceAfter = cycle.BufferBalance - shortfall;
                 }
             }
 
@@ -189,7 +213,9 @@ namespace Monivise.Application.Services
             if (cycle.RemainingDays <= 5 && safeToSpendAfter < dailyLimitBefore * 3)
                 regretSignals.Add($"Only {cycle.RemainingDays} days left — post-spend buffer is thin");
 
-            bool canAfford = willDrawFromBuffer ? bufferBalanceAfter >= 0 : bucketBalanceAfter >= 0;
+            bool canAfford = (willDrawFromPool ? poolBalanceAfter >= 0 : true)
+                    && (willDrawFromBuffer ? bufferBalanceAfter >= 0 : true)
+                    && (!willDrawFromBuffer && !willDrawFromPool ? bucketBalanceAfter >= 0 : true);
 
             return new DecisionSimulationResult
             {
@@ -206,10 +232,13 @@ namespace Monivise.Application.Services
                 RegretSignals = regretSignals,
                 WillOverdraftBucket = bucketBalanceAfter < 0,
                 WillDrawFromBuffer = willDrawFromBuffer,
+                WillDrawFromPool = willDrawFromPool,
                 BufferDrawAmount = bufferDrawAmount,
                 BufferBalanceAfter = bufferBalanceAfter,
                 CurrentBalance = bucketBalanceBefore,
                 PostSpendBalance = bucketBalanceAfter,
+                PoolDrawAmount = poolDrawAmount,
+                PoolBalanceAfter = poolBalanceAfter,
                 PaceScore = pace,
                 AverageDailySpend = avgDailyBudget,
                 DaysRemaining = cycle.RemainingDays,

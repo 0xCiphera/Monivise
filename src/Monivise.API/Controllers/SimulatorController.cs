@@ -20,14 +20,16 @@ namespace Monivise.API.Controllers
         private readonly IBucketRepository _buckets;
         private readonly ITransactionRepository _transactions;
         private readonly IFinancialCalculationService _calc;
+        private readonly IWantCategoryRepository _wantCategories;
 
         public SimulatorController(IBudgetCycleRepository cycles, IBucketRepository buckets,
-            ITransactionRepository transactions, IFinancialCalculationService calc)
+            ITransactionRepository transactions, IFinancialCalculationService calc, IWantCategoryRepository wantCategories)
         {
             _cycles = cycles;
             _buckets = buckets;
             _transactions = transactions;
             _calc = calc;
+            _wantCategories = wantCategories;
         }
 
         private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -43,7 +45,10 @@ namespace Monivise.API.Controllers
             var buckets = (await _buckets.GetActiveByUserIdAsync(UserId, ct)).ToList();
             var txns = (await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct)).ToList();
 
-            var result = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, dto.WantCategoryId, dto.Amount, buckets, txns, cycle);
+            WantCategory? wantCategory = dto.WantCategoryId is not null
+                    ? await _wantCategories.GetByIdAsync(dto.WantCategoryId.Value, ct)
+                    : null;
+            var result = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, wantCategory, dto.Amount, buckets, txns, cycle);
 
             return Ok(new DecisionSimulationResponseDto
             {
@@ -76,7 +81,10 @@ namespace Monivise.API.Controllers
                 CanAfford = result.CanAfford,
                 WillDrawFromBuffer = result.WillDrawFromBuffer,
                 BufferDrawAmount = result.BufferDrawAmount,
-                BufferBalanceAfter = result.BufferBalanceAfter
+                BufferBalanceAfter = result.BufferBalanceAfter,
+                WillDrawFromPool = result.WillDrawFromPool,
+                PoolBalanceAfter = result.PoolBalanceAfter,
+                PoolDrawAmount = result.PoolDrawAmount
             });
         }
 
@@ -92,12 +100,19 @@ namespace Monivise.API.Controllers
                 ?? throw new BucketNotFoundException(dto.BucketId);
             if (bucket.UserId != UserId) return Forbid();
 
+            WantCategory? wantCategory = dto.WantCategoryId is not null
+                    ? await _wantCategories.GetByIdAsync(dto.WantCategoryId.Value, ct)
+                    : null;
+
             var buckets = (await _buckets.GetActiveByUserIdAsync(UserId, ct)).ToList();
             var txns = (await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct)).ToList();
-            var preCheck = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, dto.WantCategoryId, dto.Amount, buckets, txns, cycle);
+            var preCheck = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, wantCategory, dto.Amount, buckets, txns, cycle);
 
             if (!preCheck.CanAfford)
                 return UnprocessableEntity(new { code = "CANNOT_AFFORD", detail = "Even the buffer can't cover this." });
+
+            if (preCheck.WillDrawFromPool)
+                cycle.DrawFromUnpricedPool(preCheck.PoolDrawAmount);
 
             if (preCheck.WillDrawFromBuffer)
                 cycle.DrawFromBuffer(preCheck.BufferDrawAmount);
