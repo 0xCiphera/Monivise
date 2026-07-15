@@ -30,7 +30,7 @@ namespace Monivise.Domain.Entities
         protected Transaction() { }
 
         public static Transaction CreateIncome(Guid userId, Guid bucketId, Guid cycleId,
-        decimal amount, string source, IncomeType incomeType = IncomeType.Primary, DateTime? date = null)
+        decimal amount, string source, IncomeType incomeType = IncomeType.Primary, Guid? intakeItemId = null, DateTime? date = null)
         {
             if (amount <= 0) throw new ArgumentException("Amount must be positive");
             return new Transaction
@@ -42,6 +42,7 @@ namespace Monivise.Domain.Entities
                 Amount = amount,
                 Source = source,
                 IncomeType = incomeType,
+                IntakeItemId = intakeItemId,
                 Date = date ?? DateTime.UtcNow
             };
         }

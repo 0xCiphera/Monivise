@@ -10,6 +10,7 @@ namespace Monivise.Domain.Entities
         public Guid BudgetCycleId { get; private set; }
         public Guid IntakeItemId { get; private set; }
         public bool IsPaid { get; private set; }
+        public decimal? PaidAmount { get; private set; }
         public DateTime? PaidAt { get; private set; }
 
         // Navigation
@@ -21,15 +22,18 @@ namespace Monivise.Domain.Entities
         public static FixedObligationStatus Create(Guid cycleId, Guid intakeItemId) =>
             new() { BudgetCycleId = cycleId, IntakeItemId = intakeItemId };
 
-        public void MarkPaid()
+        public void MarkPaid(decimal actualAmount)
         {
+            if (actualAmount < 0) throw new ArgumentOutOfRangeException(nameof(actualAmount));
             IsPaid = true;
+            PaidAmount = actualAmount;
             PaidAt = DateTime.UtcNow;
         }
 
         public void MarkUnpaid()
         {
             IsPaid = false;
+            PaidAmount = null;
             PaidAt = null;
         }
     }

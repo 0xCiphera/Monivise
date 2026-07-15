@@ -15,6 +15,7 @@ namespace Monivise.Infrastructure.Data.Configurations
             builder.HasIndex(f => new { f.BudgetCycleId, f.IntakeItemId }).IsUnique();
             builder.HasOne(f => f.Cycle).WithMany().HasForeignKey(f => f.BudgetCycleId);
             builder.HasOne(f => f.Item).WithMany().HasForeignKey(f => f.IntakeItemId);
+            builder.Property(f => f.PaidAmount).HasPrecision(18, 2);
         }
     }
 }

@@ -15,11 +15,15 @@ namespace Monivise.Infrastructure.Repositories
 
         public async Task<IEnumerable<FixedObligationStatus>> GetByCycleIdAsync(Guid cycleId, CancellationToken ct = default)
             => await _db.FixedObligationStatuses
+                .Include(f => f.Item)
                 .Where(f => f.BudgetCycleId == cycleId)
                 .ToListAsync(ct);
 
         public async Task<FixedObligationStatus?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => await _db.FixedObligationStatuses.FindAsync([id], ct);
+            => await _db.FixedObligationStatuses
+                .Include(f => f.Cycle)
+                .Include(f => f.Item)
+                .FirstOrDefaultAsync(f => f.Id == id, ct);
 
         public async Task AddAsync(IEnumerable<FixedObligationStatus> statuses, CancellationToken ct = default)
             => await _db.FixedObligationStatuses.AddRangeAsync(statuses, ct);
