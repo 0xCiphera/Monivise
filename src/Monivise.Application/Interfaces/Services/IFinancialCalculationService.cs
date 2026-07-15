@@ -16,7 +16,7 @@ namespace Monivise.Application.Interfaces.Services
         decimal GetSpendingPace(IEnumerable<Bucket> buckets, IEnumerable<Transaction> txns, BudgetCycle cycle);
         decimal GetDailyLimit(decimal safeToSpend, decimal pace, BudgetCycle cycle);
         IEnumerable<AllocationPreview> AllocateIncome(decimal amount, IEnumerable<Bucket> activeBuckets);
-        DecisionSimulationResult SimulateDecision(Guid bucketId, Guid? intakeItemId, Guid? wantCategoryId,
+        DecisionSimulationResult SimulateDecision(Guid bucketId, Guid? intakeItemId, WantCategory? wantCategory,
     decimal amount, IEnumerable<Bucket> buckets, IEnumerable<Transaction> txns, BudgetCycle cycle);
         RiskLevel GetRiskLevel(decimal postSafeToSpend, decimal postDailyLimit,
             decimal avgDailyBudget, decimal depletionPercent);

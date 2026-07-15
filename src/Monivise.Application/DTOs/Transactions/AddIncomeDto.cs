@@ -7,13 +7,12 @@ namespace Monivise.Application.DTOs.Transactions
 {
     public class AddIncomeDto
     {
-        [Required, Range(1, 9_999_999)]
-        public decimal Amount { get; set; }
-
-        [Required, RegularExpression("^(Salary|Freelance|Gift|Business|Other)$")]
-        public string Source { get; set; } = "Salary";
+        [Range(1, 9_999_999)]
+        public decimal? Amount { get; set; }
+        public string? Source { get; set; }
 
         [RegularExpression("^(Primary|Extra)$")]
         public string IncomeType { get; set; } = "Primary";
+        public List<IncomeAllocationSplitDto>? Splits { get; set; }
     }
 }

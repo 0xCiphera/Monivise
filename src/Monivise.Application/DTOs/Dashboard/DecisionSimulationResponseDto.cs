@@ -9,8 +9,11 @@ namespace Monivise.Application.DTOs.Dashboard
     {
         public string BucketName { get; set; } = string.Empty;
         public bool WillDrawFromBuffer { get; set; } 
+        public bool WillDrawFromPool { get; set; }
         public decimal BufferDrawAmount { get; set; }
         public decimal BufferBalanceAfter { get; set; }
+        public decimal PoolDrawAmount { get; set; }
+        public decimal PoolBalanceAfter { get; set; }
         public decimal Amount { get; set; }
         public decimal BucketBalanceBefore { get; set; }
         public decimal BucketBalanceAfter { get; set; }

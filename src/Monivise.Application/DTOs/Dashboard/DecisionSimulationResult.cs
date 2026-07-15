@@ -19,6 +19,9 @@ namespace Monivise.Application.DTOs.Dashboard
         public decimal DailyLimitBefore { get; init; }
         public decimal DailyLimitAfter { get; init; }
         public decimal DepletionPercent { get; init; }
+        public bool WillDrawFromPool { get; init; }
+        public decimal PoolBalanceAfter { get; init; }
+        public decimal PoolDrawAmount { get; init; }
         public RiskLevel Risk { get; init; }
         public List<string> RegretSignals { get; init; } = [];
         public bool WillOverdraftBucket { get; init; }
