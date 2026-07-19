@@ -25,21 +25,20 @@ namespace Monivise.API.Controllers
                 Name = s.Item.Name,
                 Reserved = s.Item.MonthlyAmount,
                 s.IsPaid,
-                s.PaidAmount,
                 s.PaidAt
             }));
         }
 
         [HttpPost("{id:guid}/pay")]
-        public async Task<IActionResult> MarkPaid(Guid id, [FromBody] MarkPaidDto dto, CancellationToken ct)
+        public async Task<IActionResult> MarkPaid(Guid id, CancellationToken ct)
         {
             var status = await statuses.GetByIdAsync(id, ct)
                 ?? throw new ArgumentException("Not found");
             if (status.Cycle.UserId != UserId) return Forbid();
 
-            status.MarkPaid(dto.ActualAmount);
+            status.MarkPaid();
             await statuses.SaveChangesAsync(ct);
-            return Ok(new { status.Id, status.IsPaid, status.PaidAmount });
+            return Ok(new { status.Id, status.IsPaid, status.PaidAt });
         }
 
         [HttpPost("{id:guid}/unpay")]
@@ -53,10 +52,5 @@ namespace Monivise.API.Controllers
             await statuses.SaveChangesAsync(ct);
             return Ok(new { status.Id, status.IsPaid });
         }
-    }
-
-    public class MarkPaidDto
-    {
-        public decimal ActualAmount { get; set; }
     }
 }

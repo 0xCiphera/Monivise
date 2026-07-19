@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Monivise.Application.DTOs.Transactions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -35,6 +36,6 @@ namespace Monivise.Application.DTOs.Review
 
     public class ApplySweepDto
     {
-        public Guid GoalId { get; set; }
+        public List<IncomeAllocationSplitDto>? Splits { get; set; }
     }
 }

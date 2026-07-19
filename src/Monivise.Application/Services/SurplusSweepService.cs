@@ -80,13 +80,16 @@ namespace Monivise.Application.Services
             if (dto.IsMonthEnd)
             {
                 var statuses = await fixedObligationStatuses.GetByCycleIdAsync(cycle.Id, ct);
-                dto.FixedObligations = statuses.Where(s => s.IsPaid)
+                // Surplus only ever comes from an obligation being skipped entirely this
+                // cycle (Actual = 0, so the full Reserved amount frees up) — a paid item
+                // is always paid at exactly its reserved amount, contributing nothing.
+                dto.FixedObligations = statuses.Where(s => !s.IsPaid)
                     .Select(s => new ItemActualDto
                     {
                         IntakeItemId = s.IntakeItemId,
                         Name = s.Item.Name,
                         Reserved = s.Item.MonthlyAmount,
-                        Actual = s.PaidAmount ?? 0
+                        Actual = 0
                     }).ToList();
             }
 
@@ -109,15 +112,29 @@ namespace Monivise.Application.Services
         }
         public async Task ApplySweepAsync(Guid userId, ApplySweepDto dto, CancellationToken ct = default)
         {
-            var goal = await goals.GetByIdAsync(dto.GoalId, ct)
-                ?? throw new ArgumentException("Goal not found");
-            if (goal.UserId != userId) throw new UnauthorizedAccessException();
-
             var cycle = await cycles.GetActiveByUserIdAsync(userId, ct)
                 ?? throw new CycleNotFoundException(userId);
             var review = await BuildReviewAsync(userId, ct);
 
-            if (review.TotalSurplus <= 0) return;
+            if (review.TotalSurplus <= 0) return; // nothing to sweep, no-op
+
+            if (dto.Splits is null || dto.Splits.Count == 0)
+                throw new ValidationException("SPLITS_REQUIRED", "This review has a surplus — say where it should go before sweeping.");
+
+            var validDestinations = new[] { "Buffer", "Wants", "Goal" };
+            if (dto.Splits.Any(s => !validDestinations.Contains(s.Destination)))
+                throw new ValidationException("INVALID_DESTINATION", "Destination must be Buffer, Wants, or Goal.");
+
+            decimal totalPct = dto.Splits.Sum(s => s.Percent);
+            if (Math.Abs(totalPct - 100m) > 0.01m)
+                throw new ValidationException("SPLITS_MUST_SUM_TO_100", $"Splits must sum to 100 (got {totalPct}).");
+
+            Goal? activeGoal = null;
+            if (dto.Splits.Any(s => s.Destination == "Goal"))
+            {
+                activeGoal = await goals.GetActiveAsync(userId, ct);
+                if (activeGoal is null) throw new NoActiveGoalException();
+            }
 
             var userBuckets = (await buckets.GetActiveByUserIdAsync(userId, ct)).ToList();
             Guid flexibleBucketId = userBuckets.First(b => b.Type == BucketType.Flexible).Id;
@@ -125,26 +142,45 @@ namespace Monivise.Application.Services
             Guid investmentBucketId = userBuckets.First(b => b.Type == BucketType.Investment).Id;
             Guid fixedBucketId = userBuckets.First(b => b.Type == BucketType.Fixed).Id;
 
+            // Close out each contributing item — unchanged from before, still happens
+            // regardless of where the surplus itself ends up.
             foreach (var item in review.Flexible.Where(i => i.Reserved > i.Actual))
                 await transactions.AddAsync(Transaction.CreateExpense(userId, flexibleBucketId, cycle.Id,
-                    item.Reserved - item.Actual, "Swept to goal", item.IntakeItemId), ct);
+                    item.Reserved - item.Actual, "Swept at review", item.IntakeItemId), ct);
 
             foreach (var item in review.WantsPriced.Where(i => i.Reserved > i.Actual))
                 await transactions.AddAsync(Transaction.CreateExpense(userId, wantsBucketId, cycle.Id,
-                    item.Reserved - item.Actual, "Swept to goal", null, item.WantCategoryId), ct);
+                    item.Reserved - item.Actual, "Swept at review", null, item.WantCategoryId), ct);
 
             foreach (var item in review.Investment.Where(i => i.Reserved > i.Actual))
                 await transactions.AddAsync(Transaction.CreateIncome(userId, investmentBucketId, cycle.Id,
-                    item.Reserved - item.Actual, "Swept shortfall to goal", IncomeType.Primary, item.IntakeItemId), ct);
+                    item.Reserved - item.Actual, "Swept shortfall at review", IncomeType.Primary, item.IntakeItemId), ct);
 
             if (review.IsMonthEnd)
                 foreach (var item in review.FixedObligations.Where(i => i.Reserved > i.Actual))
                     await transactions.AddAsync(Transaction.CreateExpense(userId, fixedBucketId, cycle.Id,
-                        item.Reserved - item.Actual, "Swept to goal", item.IntakeItemId), ct);
+                        item.Reserved - item.Actual, "Swept at review", item.IntakeItemId), ct);
 
-            goal.Contribute(review.TotalSurplus);
+            // Apply the surplus itself across whatever destinations were chosen.
+            decimal remainder = review.TotalSurplus;
+            for (int i = 0; i < dto.Splits.Count; i++)
+            {
+                bool isLast = i == dto.Splits.Count - 1;
+                decimal share = isLast ? remainder : Math.Round(review.TotalSurplus * dto.Splits[i].Percent / 100m, 2);
+                remainder -= share;
+                if (share <= 0) continue;
+
+                switch (dto.Splits[i].Destination)
+                {
+                    case "Buffer": cycle.AddToBuffer(share); break;
+                    case "Wants": cycle.AddToUnpricedPool(share); break;
+                    case "Goal": activeGoal!.Contribute(share); break;
+                }
+            }
+
             await transactions.SaveChangesAsync(ct);
-            await goals.SaveChangesAsync(ct);
+            await cycles.SaveChangesAsync(ct);
+            if (activeGoal is not null) await goals.SaveChangesAsync(ct);
         }
     }
 }
