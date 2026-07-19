@@ -94,8 +94,14 @@ namespace Monivise.API.Controllers
         [HttpPost("commit")]
         public async Task<IActionResult> Commit([FromBody] CommitPathwayDto dto, CancellationToken ct)
         {
+
+            var activeCycle = await cycles.GetActiveByUserIdAsync(UserId, ct);
+            if (activeCycle is not null)
+                return Conflict(new { code = "CYCLE_ALREADY_ACTIVE", detail = "You already have an active budget cycle — re-onboarding isn't available mid-cycle yet." });
+
             var profile = await intakes.GetByUserIdAsync(UserId, ct)
                 ?? throw new ArgumentException("No intake profile. Submit intake first.");
+
             var activeWants = (await wantCategories.GetActiveByUserIdAsync(UserId, ct)).ToList();
 
             var chosen = Enum.Parse<PathwayType>(dto.Pathway);

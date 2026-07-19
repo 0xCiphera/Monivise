@@ -52,6 +52,11 @@ namespace Monivise.API.Controllers
 
         private async Task<IActionResult> HandlePrimaryIncome(BudgetCycle cycle, CancellationToken ct)
         {
+            var existingPrimary = (await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct))
+                .Any(t => t.Kind == TransactionKind.Income && t.IncomeType == IncomeType.Primary);
+            if (existingPrimary)
+                return Conflict(new { code = "PRIMARY_ALREADY_RECORDED", detail = "You've already confirmed this month's income." });
+
             var profile = await _intakes.GetByUserIdAsync(UserId, ct)
                 ?? throw new ArgumentException("No intake profile — complete onboarding first.");
 

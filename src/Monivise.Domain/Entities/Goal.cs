@@ -1,4 +1,5 @@
 ﻿using Monivise.Domain.Enums;
+using Monivise.Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -31,7 +32,7 @@ namespace Monivise.Domain.Entities
         public void Contribute(decimal amount)
         {
             if (amount <= 0) throw new ArgumentException("Amount must be positive");
-            if (Status != GoalStatus.Active) throw new InvalidOperationException("Goal is not active");
+            if (Status != GoalStatus.Active) throw new GoalNotActiveException();
             CurrentAmount += amount;
             if (CurrentAmount >= TargetAmount)
             {

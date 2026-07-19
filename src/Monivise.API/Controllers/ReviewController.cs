@@ -17,7 +17,7 @@ namespace Monivise.API.Controllers
         public async Task<IActionResult> Sweep([FromBody] ApplySweepDto dto, CancellationToken ct)
         {
             await sweep.ApplySweepAsync(UserId, dto, ct);
-            return Ok(new { message = "Surplus swept to goal" });
+            return Ok(new { message = "Surplus applied" });
         }
     }
 }

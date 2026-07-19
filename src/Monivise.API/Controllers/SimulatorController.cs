@@ -21,18 +21,28 @@ namespace Monivise.API.Controllers
         private readonly ITransactionRepository _transactions;
         private readonly IFinancialCalculationService _calc;
         private readonly IWantCategoryRepository _wantCategories;
+        private readonly IIntakeProfileRepository _intakes;
 
         public SimulatorController(IBudgetCycleRepository cycles, IBucketRepository buckets,
-            ITransactionRepository transactions, IFinancialCalculationService calc, IWantCategoryRepository wantCategories)
+            ITransactionRepository transactions, IFinancialCalculationService calc,
+            IWantCategoryRepository wantCategories, IIntakeProfileRepository intakes)
         {
             _cycles = cycles;
             _buckets = buckets;
             _transactions = transactions;
             _calc = calc;
             _wantCategories = wantCategories;
+            _intakes = intakes;
         }
 
         private Guid UserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        private async Task<IntakeItem?> GetIntakeItem(Guid? intakeItemId, CancellationToken ct)
+        {
+            if (intakeItemId is null) return null;
+            var profile = await _intakes.GetByUserIdAsync(UserId, ct);
+            return profile?.Items.FirstOrDefault(i => i.Id == intakeItemId);
+        }
 
         /// <summary>Preview spend consequence before committing.</summary>
         [HttpPost("preview")]
@@ -48,7 +58,8 @@ namespace Monivise.API.Controllers
             WantCategory? wantCategory = dto.WantCategoryId is not null
                     ? await _wantCategories.GetByIdAsync(dto.WantCategoryId.Value, ct)
                     : null;
-            var result = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, wantCategory, dto.Amount, buckets, txns, cycle);
+            IntakeItem? intakeItem = await GetIntakeItem(dto.IntakeItemId, ct);
+            var result = _calc.SimulateDecision(dto.BucketId, intakeItem, wantCategory, dto.Amount, buckets, txns, cycle);
 
             return Ok(new DecisionSimulationResponseDto
             {
@@ -103,10 +114,11 @@ namespace Monivise.API.Controllers
             WantCategory? wantCategory = dto.WantCategoryId is not null
                     ? await _wantCategories.GetByIdAsync(dto.WantCategoryId.Value, ct)
                     : null;
+            IntakeItem? intakeItem = await GetIntakeItem(dto.IntakeItemId, ct);
 
             var buckets = (await _buckets.GetActiveByUserIdAsync(UserId, ct)).ToList();
             var txns = (await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct)).ToList();
-            var preCheck = _calc.SimulateDecision(dto.BucketId, dto.IntakeItemId, wantCategory, dto.Amount, buckets, txns, cycle);
+            var preCheck = _calc.SimulateDecision(dto.BucketId, intakeItem, wantCategory, dto.Amount, buckets, txns, cycle);
 
             if (!preCheck.CanAfford)
                 return UnprocessableEntity(new { code = "CANNOT_AFFORD", detail = "Even the buffer can't cover this." });
@@ -118,13 +130,26 @@ namespace Monivise.API.Controllers
                 cycle.DrawFromBuffer(preCheck.BufferDrawAmount);
 
             var txn = Transaction.CreateExpense(UserId, dto.BucketId, cycle.Id, dto.Amount,
-                $"Simulated spend: {dto.Amount:C}", dto.IntakeItemId, dto.WantCategoryId);
+                $"Simulated spend: ₦{dto.Amount:N0}", dto.IntakeItemId, dto.WantCategoryId);
 
             await _transactions.AddAsync(txn, ct);
             await _transactions.SaveChangesAsync(ct);
             await _cycles.SaveChangesAsync(ct); // persists the buffer draw, if any
 
-            return CreatedAtAction(nameof(Preview), new TransactionResponseDto { /* unchanged */ });
+            return CreatedAtAction(nameof(Preview), new TransactionResponseDto
+            {
+                Id = txn.Id,
+                BucketId = txn.BucketId,
+                BucketName = bucket.Name,
+                BucketIcon = bucket.Icon,
+                BucketColor = bucket.Color,
+                Kind = txn.Kind.ToString(),
+                Amount = txn.Amount,
+                Note = txn.Note,
+                Source = txn.Source,
+                IncomeType = txn.IncomeType.ToString(),
+                Date = txn.Date
+            });
         }
     }
 }
