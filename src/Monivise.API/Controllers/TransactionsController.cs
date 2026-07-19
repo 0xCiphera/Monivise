@@ -52,6 +52,11 @@ namespace Monivise.API.Controllers
 
         private async Task<IActionResult> HandlePrimaryIncome(BudgetCycle cycle, CancellationToken ct)
         {
+            var existingPrimary = (await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct))
+                .Any(t => t.Kind == TransactionKind.Income && t.IncomeType == IncomeType.Primary);
+            if (existingPrimary)
+                return Conflict(new { code = "PRIMARY_ALREADY_RECORDED", detail = "You've already confirmed this month's income." });
+
             var profile = await _intakes.GetByUserIdAsync(UserId, ct)
                 ?? throw new ArgumentException("No intake profile — complete onboarding first.");
 
@@ -189,6 +194,54 @@ namespace Monivise.API.Controllers
                 Kind = "Expense",
                 Amount = txn.Amount,
                 Note = txn.Note,
+                Date = txn.Date
+            });
+        }
+
+        [HttpPost("investment")]
+        [ProducesResponseType(typeof(TransactionResponseDto), 201)]
+        public async Task<IActionResult> RecordInvestment([FromBody] RecordInvestmentDto dto, CancellationToken ct)
+        {
+            var cycle = await _cycles.GetActiveByUserIdAsync(UserId, ct)
+                ?? throw new CycleNotFoundException(UserId);
+
+            var profile = await _intakes.GetByUserIdAsync(UserId, ct)
+                ?? throw new ArgumentException("No intake profile.");
+            var item = profile.Items.FirstOrDefault(i => i.Id == dto.IntakeItemId)
+                ?? throw new ArgumentException("Investment item not found.");
+            if (item.Category != ExpenseCategory.Investment)
+                return BadRequest(new { code = "NOT_AN_INVESTMENT_ITEM" });
+
+            var txns = await _transactions.GetByUserAndCycleAsync(UserId, cycle.Id, ct);
+            decimal alreadyDeposited = txns
+                .Where(t => t.Kind == TransactionKind.Income && t.IntakeItemId == dto.IntakeItemId)
+                .Sum(t => t.Amount);
+            decimal headroom = item.MonthlyAmount - alreadyDeposited;
+
+            if (headroom <= 0)
+                return UnprocessableEntity(new { code = "ITEM_FULLY_FUNDED", detail = $"{item.Name} is already fully funded this cycle." });
+            if (dto.Amount > headroom)
+                return UnprocessableEntity(new { code = "EXCEEDS_PLANNED_AMOUNT", headroom, detail = $"Only ₦{headroom:N0} left before {item.Name} is fully funded." });
+
+            var bucket = (await _buckets.GetActiveByUserIdAsync(UserId, ct))
+                .First(b => b.Type == BucketType.Investment);
+            var txn = Transaction.CreateIncome(UserId, bucket.Id, cycle.Id, dto.Amount, "Investment deposit", IncomeType.Primary, dto.IntakeItemId, DateTime.UtcNow);
+            // CreateIncome doesn't currently take an IntakeItemId — see note below.
+
+            await _transactions.AddAsync(txn, ct);
+            await _transactions.SaveChangesAsync(ct);
+
+            return CreatedAtAction(nameof(RecordInvestment), new TransactionResponseDto
+            {
+                Id = txn.Id,
+                BucketId = txn.BucketId,
+                BucketName = bucket.Name,
+                BucketIcon = bucket.Icon,
+                BucketColor = bucket.Color,
+                Kind = "Income",
+                Amount = txn.Amount,
+                Source = "Investment deposit",
+                IncomeType = "Primary",
                 Date = txn.Date
             });
         }

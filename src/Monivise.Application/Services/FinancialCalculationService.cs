@@ -25,16 +25,8 @@ namespace Monivise.Application.Services
 
         public decimal GetSafeToSpend(IEnumerable<Bucket> buckets, IEnumerable<Transaction> txns)
         {
-            var txnList = txns.ToList();
-            var bucketList = buckets.ToList();
-
-            var flexBuckets = bucketList.Where(b => b.Type == BucketType.Flexible && b.IsActive);
-            var fixedBuckets = bucketList.Where(b => b.Type == BucketType.Fixed && b.IsActive);
-
-            decimal flexibleRemaining = flexBuckets.Sum(b => GetBalance(b.Id, txnList));
-            decimal unpaidFixedObligations = fixedBuckets.Sum(b => Math.Max(0m, GetBalance(b.Id, txnList)));
-
-            return Math.Max(0m, flexibleRemaining - unpaidFixedObligations);
+            var flexBuckets = buckets.Where(b => b.Type == BucketType.Flexible && b.IsActive);
+            return Math.Max(0m, flexBuckets.Sum(b => GetBalance(b.Id, txns)));
         }
 
         // ─── SPENDING PACE ───
@@ -118,7 +110,7 @@ namespace Monivise.Application.Services
 
         // ─── DECISION SIMULATION ───
 
-        public DecisionSimulationResult SimulateDecision(Guid bucketId, Guid? intakeItemId, WantCategory? wantCategory,
+        public DecisionSimulationResult SimulateDecision(Guid bucketId, IntakeItem? intakeItem, WantCategory? wantCategory,
     decimal amount, IEnumerable<Bucket> buckets, IEnumerable<Transaction> txns, BudgetCycle cycle)
         {
             var txnList = txns.ToList();
@@ -139,6 +131,7 @@ namespace Monivise.Application.Services
             decimal poolDrawAmount = 0m;
             decimal bufferBalanceAfter = cycle.BufferBalance;
             decimal poolBalanceAfter = cycle.UnpricedWantsPoolBalance;
+            var weekStart = DateTime.UtcNow.Date.AddDays(-7);
 
             if (wantCategory is not null && wantCategory.IsUnpriced)
             {
@@ -161,16 +154,39 @@ namespace Monivise.Application.Services
                     poolBalanceAfter = cycle.UnpricedWantsPoolBalance - amount;
                 }
             }
-            else if (intakeItemId is not null || (wantCategory is not null && !wantCategory.IsUnpriced))
+            else if (intakeItem is not null && intakeItem.Category == ExpenseCategory.Investment)
             {
+                // Investment deposits genuinely ARE recorded per-item (via the dedicated
+                // deposit endpoint), so an income-transaction trail is the correct source here.
                 decimal itemAllocated = txnList
-                    .Where(t => t.Kind == TransactionKind.Income
-                        && ((intakeItemId is not null && t.IntakeItemId == intakeItemId)
-                            || (wantCategory is not null && t.WantCategoryId == wantCategory.Id)))
+                    .Where(t => t.Kind == TransactionKind.Income && t.IntakeItemId == intakeItem.Id)
                     .Sum(t => t.Amount);
                 decimal itemSpent = txnList
-                    .Where(t => t.Kind == TransactionKind.Expense
-                        && ((intakeItemId is not null && t.IntakeItemId == intakeItemId)
+                    .Where(t => t.Kind == TransactionKind.Expense && t.IntakeItemId == intakeItem.Id)
+                    .Sum(t => t.Amount);
+                decimal itemRemaining = itemAllocated - itemSpent;
+
+                if (amount > itemRemaining)
+                {
+                    decimal shortfall = amount - Math.Max(0, itemRemaining);
+                    willDrawFromBuffer = true;
+                    bufferDrawAmount = shortfall;
+                    bufferBalanceAfter = cycle.BufferBalance - shortfall;
+                }
+            }
+            else if (intakeItem is not null || (wantCategory is not null && !wantCategory.IsUnpriced))
+            {
+                // Flexible items and priced Want categories never get a per-item income
+                // transaction — Primary/Extra income only ever tags the bucket, not the
+                // item within it. Their real budget is their own reserved amount, scaled
+                // to a week (same convention SurplusSweepService already uses).
+                decimal itemAllocated = intakeItem is not null
+                    ? Math.Round(intakeItem.MonthlyAmount * 7m / 30m, 2)
+                    : Math.Round(wantCategory!.MonthlyAmount * 7m / 30m, 2);
+
+                decimal itemSpent = txnList
+                    .Where(t => t.Kind == TransactionKind.Expense && t.Date.Date >= weekStart
+                        && ((intakeItem is not null && t.IntakeItemId == intakeItem.Id)
                             || (wantCategory is not null && t.WantCategoryId == wantCategory.Id)))
                     .Sum(t => t.Amount);
                 decimal itemRemaining = itemAllocated - itemSpent;
@@ -279,5 +295,5 @@ namespace Monivise.Application.Services
             return projections;
         }
     }
-    
+
 }

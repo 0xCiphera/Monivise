@@ -1,21 +1,28 @@
-﻿using System;
+﻿using Monivise.Application.DTOs.Transactions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Monivise.Application.DTOs.Review
 {
-    public class FixedActualDto
+    public class ItemActualDto
     {
-        public Guid IntakeItemId { get; set; }
+        public Guid? IntakeItemId { get; set; }
+        public Guid? WantCategoryId { get; set; }
         public string Name { get; set; } = string.Empty;
         public decimal Reserved { get; set; }
-        public decimal ActualSpent { get; set; }
+        public decimal Actual { get; set; }
     }
 
     public class WeeklyReviewDto
     {
-        public List<FixedActualDto> FixedPrompts { get; set; } = [];
-        public decimal DailyUnderspend { get; set; }
+        public bool IsMonthEnd { get; set; }
+        public List<ItemActualDto> Flexible { get; set; } = [];
+        public List<ItemActualDto> Investment { get; set; } = [];
+        public List<ItemActualDto> WantsPriced { get; set; } = [];
+        public List<ItemActualDto> FixedObligations { get; set; } = []; // only populated when IsMonthEnd
+        public decimal UnpricedPoolBalance { get; set; }
+        public decimal BufferBalance { get; set; }
         public decimal TotalSurplus { get; set; }
         public GoalRef? ActiveGoal { get; set; }
     }
@@ -29,8 +36,6 @@ namespace Monivise.Application.DTOs.Review
 
     public class ApplySweepDto
     {
-        public Guid GoalId { get; set; }
-        public decimal Amount { get; set; }
-        public List<FixedActualDto> FixedActuals { get; set; } = [];
+        public List<IncomeAllocationSplitDto>? Splits { get; set; }
     }
 }
