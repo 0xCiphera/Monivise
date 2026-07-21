@@ -29,7 +29,6 @@ public class AuthEffects
             var response = await api.LoginAsync(new(action.Email, action.Password));
             tokenStore.Set(response.AccessToken, response.ExpiresAt);
             dispatcher.Dispatch(new LoginSuccessAction(response));
-            nav.NavigateTo("/dashboard");
         }
         catch (ApiException ex)
         {
@@ -56,7 +55,6 @@ public class AuthEffects
             var response = await api.RegisterAsync(new(action.DisplayName, action.Email, action.Password));
             tokenStore.Set(response.AccessToken, response.ExpiresAt);
             dispatcher.Dispatch(new RegisterSuccessAction(response));
-            nav.NavigateTo("/onboarding");
         }
         catch (ApiException ex)
         {

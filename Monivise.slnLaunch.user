@@ -1,14 +1,16 @@
 [
   {
-    "Name": "Project Start",
+    "Name": "Monivise Start",
     "Projects": [
       {
         "Path": "src\\Monivise.API\\Monivise.API.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": "http"
       },
       {
         "Path": "src\\Monivise.App\\Monivise.App.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": "http"
       }
     ]
   }
