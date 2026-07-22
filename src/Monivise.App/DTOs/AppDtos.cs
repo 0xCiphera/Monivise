@@ -92,7 +92,8 @@ public record DashboardSummaryDto(
 
 // ── Onboarding ────────────────────────────────────────────────────────────────
 public record ExpenseIntake(string Name, string Category, string Nature, decimal MonthlyAmount, bool ReserveOnly);
-public record OnboardingIntakeRequest(decimal BaselineIncome, List<ExpenseIntake> Items);
+public record WantCategoryRequest(string Name, bool IsUnpriced, decimal MonthlyAmount);
+public record SubmitIntakeRequest(decimal BaselineIncome, List<ExpenseIntake> Items, List<WantCategoryRequest> WantCategories);
 public record PathwayBucket(string Name, string Type, decimal AllocationPercent);
 public record PathwayPreview(
     string Pathway, 
@@ -102,8 +103,9 @@ public record PathwayPreview(
     decimal DailyLimit, 
     decimal WeeklyLimit, 
     decimal AffordabilityGap,
-    List<string> SuggestedCuts, 
-    List<PathwayBucket> Buckets);
+    decimal BufferAmount, 
+    decimal UnpricedWantsPoolAmount,
+    List<string> SuggestedCuts, List<PathwayBucket> Buckets);
 public record CommitPathwayRequest(string Pathway);
 
 // ── Goals ─────────────────────────────────────────────────────────────────────
