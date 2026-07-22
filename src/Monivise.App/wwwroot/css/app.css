@@ -34,14 +34,12 @@ body {
     align-items: center;
     min-height: 100dvh;
     padding: var(--mv-space-4);
-    max-width: 100%;
 }
 
-.mv-shell--auth > * {
+.mv-shell--auth__content {
     width: 100%;
     max-width: 360px;
 }
-
 @media (min-width: 431px) {
     body {
         display: flex;

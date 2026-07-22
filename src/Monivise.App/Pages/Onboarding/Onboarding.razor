@@ -5,6 +5,7 @@
 @inject IDispatcher Dispatcher
 @inject NavigationManager Nav
 
+<div class="mv-shell--auth__content">
 <div style="display:flex; align-items:center; gap:12px; padding-bottom:14px;">
     @if (step > 0)
     {
@@ -154,12 +155,13 @@ else if (step == 5)
         </button>
     </div>
 }
+</div>
 
 @if (sheetOpen)
 {
     var cfg = StepConfig[step];
     <div style="position:absolute; inset:0; background:rgba(22,24,29,0.35); z-index:50;" @onclick="() => sheetOpen = false"></div>
-    <div class="mv-scale-in" style="position:absolute; left:0; right:0; bottom:0; background:var(--mv-bg); border-radius:20px 20px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,0.12); z-index:51; padding-bottom:env(safe-area-inset-bottom);" @onclick:stopPropagation="true">
+    <div class="mv-scale-in" style="position:absolute; left:0; right:0; bottom:0; top:15%; background:var(--mv-bg); border-radius:20px 20px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,0.12); z-index:51; display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom);" @onclick:stopPropagation="true">
         <div style="width:36px; height:4px; border-radius:2px; background:var(--mv-border); margin:10px auto 0;"></div>
         <div style="padding:16px 22px 0; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:16px; font-weight:600; color:@cfg.Accent;">Add to @cfg.Title</span>
