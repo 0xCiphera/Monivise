@@ -18,6 +18,7 @@ public record AppState
     public SimulateResponse? SimulatorPreview { get; init; }
     public bool SimulatorIsLoading { get; init; }
     public string? SimulatorError { get; init; }
+    public bool IncomeSheetRequested { get; init; }
 
     private AppState() { }
     public static AppState CreateInitial() => new();

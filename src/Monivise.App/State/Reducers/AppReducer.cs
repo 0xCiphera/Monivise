@@ -20,6 +20,8 @@ public static class AppReducer
     [ReducerMethod] public static AppState OnPreviewSuccess(AppState s, PreviewSimulationSuccessAction a) => s with { SimulatorIsLoading = false, SimulatorPreview = a.Preview };
     [ReducerMethod] public static AppState OnPreviewFailure(AppState s, PreviewSimulationFailureAction a) => s with { SimulatorIsLoading = false, SimulatorError = a.Message };
     [ReducerMethod] public static AppState OnClearSimulator(AppState s, ClearSimulatorAction _) => s with { SimulatorBucketId = null, SimulatorAmount = 0, SimulatorPreview = null, SimulatorError = null };
+    [ReducerMethod] public static AppState OnRequestIncomeSheet(AppState s, RequestIncomeSheetAction _) => s with { IncomeSheetRequested = true };
+    [ReducerMethod] public static AppState OnAcknowledgeIncomeSheetRequest(AppState s, AcknowledgeIncomeSheetRequestAction _) => s with { IncomeSheetRequested = false };
 
     private static List<AppMessage> Append(List<AppMessage> msgs, string text, string variant) =>
         msgs.Append(new AppMessage(Guid.NewGuid(), text, variant)).ToList();

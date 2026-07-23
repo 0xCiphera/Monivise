@@ -38,13 +38,14 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<DashboardApiClient>();
-builder.Services.AddScoped<BucketApiClient>();
 builder.Services.AddScoped<SimulatorApiClient>();
 builder.Services.AddScoped<TransactionApiClient>();
 builder.Services.AddScoped<OnboardingApiClient>();
 builder.Services.AddScoped<GoalApiClient>();
 builder.Services.AddScoped<ReviewApiClient>();
 builder.Services.AddScoped<UserApiClient>();
+builder.Services.AddScoped<BudgetCycleApiClient>();
+builder.Services.AddScoped<FixedObligationApiClient>();
 
 builder.Services.AddFluxor(options =>
 {

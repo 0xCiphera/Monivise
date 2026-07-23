@@ -24,7 +24,7 @@ public class SimulatorEffects
 
         try
         {
-            var preview = await api.PreviewAsync(new SimulateRequest(s.SimulatorBucketId.Value, s.SimulatorAmount));
+            var preview = await api.PreviewAsync(new SimulateRequest(s.SimulatorBucketId.Value, null, null, s.SimulatorAmount));
             dispatcher.Dispatch(new PreviewSimulationSuccessAction(preview));
         }
         catch (ApiException ex)
@@ -45,7 +45,7 @@ public class SimulatorEffects
 
         try
         {
-            var tx = await api.CommitAsync(new SimulateRequest(s.SimulatorBucketId.Value, s.SimulatorAmount));
+            var tx = await api.CommitAsync(new SimulateRequest(s.SimulatorBucketId.Value, null, null, s.SimulatorAmount));
             dispatcher.Dispatch(new CommitSimulationSuccessAction(tx));
             dispatcher.Dispatch(new ShowSuccessAction("Spend recorded."));
             dispatcher.Dispatch(new ClearSimulatorAction());

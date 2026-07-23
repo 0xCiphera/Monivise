@@ -1,6 +1,8 @@
 @using Monivise.App.Components.Organisms
+@using Monivise.App.State.Actions
 @inherits LayoutComponentBase
 @inject NavigationManager Nav
+@inject IDispatcher Dispatcher
 
 <div class="mv-header">
     <p class="mv-header__brand">Monivise</p>
@@ -17,7 +19,7 @@
 
 @if (ShowFab)
 {
-    <button class="mv-fab" aria-label="Quick add" @onclick="OnFabClick">+</button>
+    <button class="mv-fab" aria-label="Quick add" @onclick="() => quickAddOpen = true">+</button>
 }
 
 <nav class="mv-nav" aria-label="Primary">
@@ -27,13 +29,61 @@
     <NavItem Href="/settings" Icon="settings" Label="Settings" Active="@IsActive("/settings")" />
 </nav>
 
+@if (quickAddOpen)
+{
+    <div style="position:fixed; inset:0; background:rgba(22,24,29,0.35); z-index:50;" @onclick="() => quickAddOpen = false"></div>
+    <div class="mv-scale-in" style="position:fixed; left:0; right:0; bottom:0; background:var(--mv-bg); border-radius:20px 20px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,0.12); z-index:51; padding-bottom:env(safe-area-inset-bottom);" @onclick:stopPropagation="true">
+        <div style="width:36px; height:4px; border-radius:2px; background:var(--mv-border); margin:10px auto 0;"></div>
+        <p style="padding:18px 22px 8px; font-size:16px; font-weight:600; color:var(--mv-text-primary);">Quick add</p>
+        <div style="display:flex; flex-direction:column; padding:0 14px 20px;">
+            <button type="button" @onclick="OnRecordIncome" style="display:flex; align-items:center; gap:14px; padding:14px 8px; border:none; background:transparent; text-align:left; cursor:pointer;">
+                <div style="width:36px; height:36px; border-radius:10px; background:var(--mv-surface-sunken, #f0f1f3); display:flex; align-items:center; justify-content:center; font-size:16px;">+</div>
+                <span style="font-size:15px; color:var(--mv-text-primary); font-weight:500;">Record income</span>
+            </button>
+            <button type="button" @onclick='() => GoTo("/simulator")' style="display:flex; align-items:center; gap:14px; padding:14px 8px; border:none; background:transparent; text-align:left; cursor:pointer;">
+                <div style="width:36px; height:36px; border-radius:10px; background:var(--mv-surface-sunken, #f0f1f3); display:flex; align-items:center; justify-content:center; font-size:16px;">−</div>
+                <span style="font-size:15px; color:var(--mv-text-primary); font-weight:500;">Record expense</span>
+            </button>
+            <div style="display:flex; align-items:center; gap:14px; padding:14px 8px; opacity:0.45;">
+                <div style="width:36px; height:36px; border-radius:10px; background:var(--mv-surface-sunken, #f0f1f3); display:flex; align-items:center; justify-content:center; font-size:16px;">↑</div>
+                <span style="font-size:15px; color:var(--mv-text-primary); font-weight:500; flex:1;">Record investment</span>
+                <span style="font-size:11px; color:var(--mv-text-tertiary); font-weight:600;">Soon</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; padding:14px 8px; opacity:0.45;">
+                <div style="width:36px; height:36px; border-radius:10px; background:var(--mv-surface-sunken, #f0f1f3); display:flex; align-items:center; justify-content:center; font-size:16px;">✓</div>
+                <span style="font-size:15px; color:var(--mv-text-primary); font-weight:500; flex:1;">Mark a bill paid</span>
+                <span style="font-size:11px; color:var(--mv-text-tertiary); font-weight:600;">Soon</span>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public string Title { get; set; } = "";
     [Parameter] public string? Subtitle { get; set; }
     [Parameter] public bool ShowFab { get; set; } = true;
-    [Parameter] public EventCallback OnFab { get; set; }
+
+    private bool quickAddOpen;
 
     private bool IsActive(string path) => Nav.Uri.EndsWith(path, StringComparison.OrdinalIgnoreCase);
 
-    private Task OnFabClick() => OnFab.HasDelegate ? OnFab.InvokeAsync() : Task.CompletedTask;
+    private void OnRecordIncome()
+    {
+        quickAddOpen = false;
+        if (IsActive("/dashboard"))
+        {
+            Dispatcher.Dispatch(new RequestIncomeSheetAction());
+        }
+        else
+        {
+            Dispatcher.Dispatch(new RequestIncomeSheetAction());
+            Nav.NavigateTo("/dashboard");
+        }
+    }
+
+    private void GoTo(string path)
+    {
+        quickAddOpen = false;
+        Nav.NavigateTo(path);
+    }
 }

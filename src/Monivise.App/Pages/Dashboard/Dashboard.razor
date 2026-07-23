@@ -1,10 +1,14 @@
 @page "/dashboard"
 @layout AppShell
 @attribute [Authorize]
-@inherits FluxorComponent
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IState<AppState> AppState
 @inject IDispatcher Dispatcher
 @inject NavigationManager Nav
+@inject TransactionApiClient TxApi
+@inject BudgetCycleApiClient CycleApi
+@inject ReviewApiClient ReviewApi
+@inject GoalApiClient GoalApi
 
 @if (AppState.Value.IsLoading && AppState.Value.Dashboard is null)
 {
@@ -13,21 +17,16 @@
         <div style="height:28px; width:160px; background:var(--mv-border); border-radius:4px;"></div>
         <div style="height:10px; width:120px; background:var(--mv-border); border-radius:4px; margin-top: var(--mv-space-2);"></div>
     </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--mv-space-3); margin-top: var(--mv-space-3);">
-        @for (int i = 0; i < 2; i++)
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap: var(--mv-space-2); margin-top: var(--mv-space-3);">
+        @for (int i = 0; i < 3; i++)
         {
-            <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3); animation: mv-pulse 1.4s ease-in-out infinite;">
-                <div style="height:10px; width:50px; background:var(--mv-border); border-radius:4px;"></div>
-                <div style="height:18px; width:80px; background:var(--mv-border); border-radius:4px; margin-top: var(--mv-space-2);"></div>
-            </div>
+            <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3); height:52px; animation: mv-pulse 1.4s ease-in-out infinite;"></div>
         }
     </div>
-
-    <div style="height:14px; width:70px; background:var(--mv-border); border-radius:4px; margin: var(--mv-space-5) 0 var(--mv-space-2);"></div>
-    @for (int i = 0; i < 3; i++)
+    <div style="height:14px; width:90px; background:var(--mv-border); border-radius:4px; margin: var(--mv-space-5) 0 var(--mv-space-2);"></div>
+    @for (int i = 0; i < 4; i++)
     {
-        <div style="height:56px; background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); margin-bottom: var(--mv-space-2); animation: mv-pulse 1.4s ease-in-out infinite;"></div>
+        <div style="height:76px; background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-lg); margin-bottom: var(--mv-space-2); animation: mv-pulse 1.4s ease-in-out infinite;"></div>
     }
 }
 else if (AppState.Value.Dashboard is null)
@@ -41,24 +40,30 @@ else if (AppState.Value.Dashboard is null)
 else
 {
     var d = AppState.Value.Dashboard;
-    <div class="mv-card mv-card--hero mv-scale-in">
-        <p class="mv-card__label" style="font-size: var(--mv-fs-xs); margin:0 0 var(--mv-space-1);">Safe to spend</p>
-        <p style="font-size: var(--mv-fs-2xl); font-weight:600; margin:0;">@CurrencyFormatter.Format(d.SafeToSpend)</p>
-        <p class="mv-card__label" style="font-size: var(--mv-fs-xs); margin: var(--mv-space-2) 0 0;">@CurrencyFormatter.Format(d.DailyLimit)/day &middot; @d.PaceLabel</p>
+    bool isFinalWeek = d.DaysRemaining <= 7;
+
+    <div style="text-align:center; padding: var(--mv-space-2) 0;">
+        <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-secondary); font-weight:500; text-transform:uppercase; letter-spacing:0.02em; margin:0;">Safe to spend today</p>
+        <p style="font-size:48px; font-weight:600; color:var(--mv-text-primary); letter-spacing:-0.02em; margin:0; line-height:1.1;">@CurrencyFormatter.Format(d.SafeToSpend)</p>
+        <p style="font-size: var(--mv-fs-xs); color: var(--mv-text-tertiary); margin:4px 0 0;">@d.PaceLabel</p>
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--mv-space-3); margin-top: var(--mv-space-3);">
-        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3);">
-            <p style="font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); margin:0;">Income</p>
-            <p style="font-size: var(--mv-fs-md); font-weight:600; margin: var(--mv-space-1) 0 0;">@CurrencyFormatter.Format(d.TotalIncome)</p>
+    <div style="display:flex; gap: var(--mv-space-2); padding-top: var(--mv-space-4);">
+        <div style="flex:1; background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-2); text-align:center;">
+            <p style="font-size:11px; color:var(--mv-text-tertiary); margin:0;">Received</p>
+            <p style="font-size:14px; font-weight:600; color:var(--mv-text-primary); margin:2px 0 0;">@CurrencyFormatter.Format(d.TotalIncome)</p>
         </div>
-        <div style="background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-3);">
-            <p style="font-size: var(--mv-fs-xs); color:var(--mv-text-tertiary); margin:0;">Spent</p>
-            <p style="font-size: var(--mv-fs-md); font-weight:600; margin: var(--mv-space-1) 0 0;">@CurrencyFormatter.Format(d.TotalSpent)</p>
+        <div style="flex:1; background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-2); text-align:center;">
+            <p style="font-size:11px; color:var(--mv-text-tertiary); margin:0;">Left this month</p>
+            <p style="font-size:14px; font-weight:600; color:var(--mv-text-primary); margin:2px 0 0;">@CurrencyFormatter.Format(Math.Max(0, d.TotalIncome - d.TotalSpent))</p>
+        </div>
+        <div style="flex:1; background:var(--mv-surface); border:1px solid var(--mv-border); border-radius: var(--mv-radius-md); padding: var(--mv-space-2); text-align:center;">
+            <p style="font-size:11px; color:var(--mv-text-tertiary); margin:0;">Left this week</p>
+            <p style="font-size:14px; font-weight:600; color:var(--mv-text-primary); margin:2px 0 0;">@CurrencyFormatter.Format(d.SafeToSpend)</p>
         </div>
     </div>
 
-    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-2);">Buckets</p>
+    <p style="font-size: var(--mv-fs-sm); font-weight:600; color:var(--mv-text-tertiary); text-transform:uppercase; letter-spacing:0.02em; margin: var(--mv-space-5) 0 var(--mv-space-2);">Your buckets</p>
     @if (d.Buckets.Count == 0)
     {
         <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary);">No buckets yet.</p>
@@ -68,12 +73,12 @@ else
         <div style="display:flex; flex-direction:column; gap: var(--mv-space-2);">
             @foreach (var bucket in d.Buckets)
             {
-                <BucketRow Bucket="bucket" OnSelect='b => Nav.NavigateTo($"/simulator?bucket={b.Id}")' />
+                <BucketRow Bucket="bucket" OnSelect="HandleBucketTap" />
             }
         </div>
     }
 
-    <p style="font-size: var(--mv-fs-sm); font-weight:600; margin: var(--mv-space-5) 0 var(--mv-space-2);">Recent activity</p>
+    <p style="font-size: var(--mv-fs-sm); font-weight:600; color:var(--mv-text-tertiary); text-transform:uppercase; letter-spacing:0.02em; margin: var(--mv-space-5) 0 var(--mv-space-2);">Recent activity</p>
     @if (d.Transactions.Count == 0)
     {
         <p style="font-size: var(--mv-fs-sm); color: var(--mv-text-tertiary);">No transactions yet.</p>
@@ -89,10 +94,250 @@ else
     }
 }
 
+@if (sheetOpen)
+{
+    var d = AppState.Value.Dashboard;
+    bool isFinalWeek = d is not null && d.DaysRemaining <= 7;
+
+    <div style="position:absolute; inset:0; background:rgba(22,24,29,0.35); z-index:50;" @onclick="CloseSheet"></div>
+    <div class="mv-scale-in" style="position:absolute; left:0; right:0; bottom:0; background:var(--mv-bg); border-radius:20px 20px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,0.12); z-index:51; padding-bottom:env(safe-area-inset-bottom); max-height:85vh; overflow-y:auto;" @onclick:stopPropagation="true">
+        <div style="width:36px; height:4px; border-radius:2px; background:var(--mv-border); margin:10px auto 0;"></div>
+
+        @if (isFinalWeek)
+        {
+            <div style="padding:20px 24px 0;">
+                <p style="font-size:18px; font-weight:600; color:var(--mv-text-primary); margin:0;">Close out this cycle</p>
+                <p style="font-size:14px; color:var(--mv-text-secondary); margin:6px 0 0; line-height:1.5;">You're in your last week. Closing out settles this cycle and starts the next one.</p>
+            </div>
+
+            @if (isLoadingSurplus)
+            {
+                <p style="text-align:center; color:var(--mv-text-secondary); padding: var(--mv-space-5) 0;">Checking this cycle's numbers…</p>
+            }
+            else if (surplus > 0)
+            {
+                <div style="margin:18px 24px 0; padding:14px 16px; background:var(--mv-warning-bg); border-radius:12px; font-size:13px; color:var(--mv-warning-text); line-height:1.5;">
+                    @CurrencyFormatter.Format(surplus) left over this cycle — say where it should go.
+                </div>
+                <div style="padding:18px 24px 24px;">
+                    <AllocationSplitPicker ShowWants="true" HasActiveGoal="@hasActiveGoal" GoalName="@activeGoalName"
+                                           ConfirmLabel="Close out & start next cycle" IsSubmitting="@isSubmitting"
+                                           OnConfirm="HandleRollover" />
+                </div>
+            }
+            else
+            {
+                <div style="padding:20px 24px 28px;">
+                    <button type="button" disabled="@isSubmitting" @onclick="() => HandleRollover(null)"
+                            style="height:52px; width:100%; border-radius:12px; border:none; background:var(--mv-accent); color:#ffffff; font-size:15px; font-weight:600; cursor:pointer;">
+                        @(isSubmitting ? "Closing out…" : "Close out & start next cycle")
+                    </button>
+                </div>
+            }
+        }
+        else if (extraStep == "amount")
+        {
+            <div style="padding:20px 24px 0;">
+                <p style="font-size:18px; font-weight:600; color:var(--mv-text-primary); margin:0;">Record income</p>
+                <p style="font-size:14px; color:var(--mv-text-secondary); margin:6px 0 0; line-height:1.5;">Salary is confirmed automatically each cycle. Got something extra — a gift, bonus, side income? Log it here.</p>
+            </div>
+            <div style="padding:18px 24px 0;">
+                <input type="text" value="@extraName" @oninput="e => extraName = e.Value?.ToString() ?? string.Empty" placeholder="e.g. Birthday gift, freelance job"
+                       style="width:100%; height:50px; padding:0 14px; border-radius:12px; border:1px solid var(--mv-border); background:var(--mv-surface); font-size:15px; color:var(--mv-text-primary); box-sizing:border-box; outline:none;" />
+            </div>
+            <div style="text-align:center; padding:16px 0 4px;">
+                <span style="font-size:32px; font-weight:600; color:@(ExtraAmount > 0 ? "var(--mv-text-primary)" : "var(--mv-text-tertiary)");">@CurrencyFormatter.Format(ExtraAmount)</span>
+            </div>
+            <div style="padding:6px 24px 0;">
+                <NumPad Value="@extraDigits" ValueChanged="v => extraDigits = v" MaxValue="999999999" />
+            </div>
+            <div style="padding:18px 24px 24px;">
+                <button type="button" disabled="@(string.IsNullOrWhiteSpace(extraName) || ExtraAmount <= 0)" @onclick="GoToDestinationStep"
+                        style="height:52px; width:100%; border-radius:12px; border:none; background:@((string.IsNullOrWhiteSpace(extraName) || ExtraAmount <= 0) ? "var(--mv-text-tertiary)" : "var(--mv-accent)"); color:#ffffff; font-size:15px; font-weight:600; cursor:pointer;">
+                    Continue
+                </button>
+            </div>
+        }
+        else
+        {
+            <div style="padding:20px 24px 0;">
+                <p style="font-size:18px; font-weight:600; color:var(--mv-text-primary); margin:0;">Where should it go?</p>
+                <p style="font-size:14px; color:var(--mv-text-secondary); margin:6px 0 0;">@CurrencyFormatter.Format(ExtraAmount) — @extraName</p>
+            </div>
+            <div style="padding:18px 24px 24px;">
+                @if (isLoadingGoal)
+                {
+                    <p style="text-align:center; color:var(--mv-text-secondary); padding: var(--mv-space-4) 0;">One moment…</p>
+                }
+                else
+                {
+                    <AllocationSplitPicker ShowWants="true" HasActiveGoal="@hasActiveGoal" GoalName="@activeGoalName"
+                                           ConfirmLabel="Add income" IsSubmitting="@isSubmitting"
+                                           OnConfirm="HandleExtraIncome" />
+                }
+                <div style="text-align:center; font-size:13px; color:var(--mv-text-secondary); margin-top:12px;">
+                    <a href="#" @onclick='() => extraStep = "amount"' @onclick:preventDefault="true" style="color:var(--mv-text-secondary); text-decoration:none;">Back</a>
+                </div>
+            </div>
+        }
+    </div>
+}
+
 @code {
+    private bool sheetOpen;
+    private string extraStep = "amount";
+    private string extraName = "";
+    private string extraDigits = "0";
+    private bool hasActiveGoal;
+    private string activeGoalName = "";
+    private bool isLoadingGoal;
+    private bool isLoadingSurplus;
+    private decimal surplus;
+    private bool isSubmitting;
+
+    private decimal ExtraAmount => decimal.TryParse(extraDigits, out var v) ? v : 0;
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
         Dispatcher.Dispatch(new LoadDashboardAction());
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (AppState.Value.IncomeSheetRequested && !sheetOpen)
+        {
+            Dispatcher.Dispatch(new AcknowledgeIncomeSheetRequestAction());
+            _ = OpenIncomeSheet();
+        }
+    }
+
+    private async Task OpenIncomeSheet()
+    {
+        sheetOpen = true;
+        extraStep = "amount";
+        extraName = "";
+        extraDigits = "0";
+        StateHasChanged();
+
+        var d = AppState.Value.Dashboard;
+        if (d is not null && d.DaysRemaining <= 7)
+        {
+            isLoadingSurplus = true;
+            StateHasChanged();
+            try
+            {
+                var review = await ReviewApi.GetWeeklyAsync();
+                surplus = review.TotalSurplus;
+            }
+            catch (Exception)
+            {
+                surplus = 0;
+            }
+            finally
+            {
+                isLoadingSurplus = false;
+                StateHasChanged();
+            }
+            if (surplus > 0) await LoadActiveGoal();
+        }
+    }
+
+    private void CloseSheet() => sheetOpen = false;
+
+    private async Task GoToDestinationStep()
+    {
+        extraStep = "destination";
+        await LoadActiveGoal();
+    }
+
+    private async Task LoadActiveGoal()
+    {
+        isLoadingGoal = true;
+        StateHasChanged();
+        try
+        {
+            var goals = await GoalApi.GetGoalsAsync();
+            var active = goals.FirstOrDefault(g => g.Status == "Active");
+            hasActiveGoal = active is not null;
+            activeGoalName = active?.Name ?? "Active Goal";
+        }
+        catch (Exception)
+        {
+            hasActiveGoal = false;
+        }
+        finally
+        {
+            isLoadingGoal = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleExtraIncome(List<IncomeAllocationSplit> splits)
+    {
+        isSubmitting = true;
+        try
+        {
+            await TxApi.RecordIncomeAsync(new AddIncomeRequest("Extra", ExtraAmount, extraName, splits));
+            Dispatcher.Dispatch(new ShowSuccessAction("Income added."));
+            sheetOpen = false;
+            Dispatcher.Dispatch(new LoadDashboardAction());
+        }
+        catch (ApiException ex)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction(ex.Message));
+        }
+        catch (Exception)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction("Network error. Please check your connection."));
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandleRollover(List<IncomeAllocationSplit>? splits)
+    {
+        isSubmitting = true;
+        try
+        {
+            await CycleApi.RolloverAsync(new RolloverRequest(splits));
+            Dispatcher.Dispatch(new ShowSuccessAction("Cycle closed out — welcome to the new one."));
+            sheetOpen = false;
+            Dispatcher.Dispatch(new LoadDashboardAction());
+        }
+        catch (ApiException ex)
+        {
+            var message = ex.ErrorCode switch
+            {
+                "CYCLE_NOT_YET_ELIGIBLE" => "This cycle isn't eligible to close out yet.",
+                "SPLITS_REQUIRED" => "This cycle has a surplus — say where it should go.",
+                "NO_ACTIVE_GOAL" => "You selected a goal but don't have an active one.",
+                _ => ex.Message
+            };
+            Dispatcher.Dispatch(new ShowErrorAction(message));
+        }
+        catch (Exception)
+        {
+            Dispatcher.Dispatch(new ShowErrorAction("Network error. Please check your connection."));
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void HandleBucketTap(BucketDto bucket)
+    {
+        if (bucket.Type == "Fixed")
+        {
+            Dispatcher.Dispatch(new ShowInfoAction("Fixed Obligations checklist is coming in the next phase."));
+        }
+        else
+        {
+            Nav.NavigateTo($"/simulator?bucket={bucket.Id}");
+        }
     }
 }

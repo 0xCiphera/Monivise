@@ -1,0 +1,72 @@
+﻿<div class="mv-split-picker">
+    <div class="mv-alloc-row @(bufferOn ? "on" : "")">
+        <label><input type="checkbox" @bind="bufferOn" @bind:after="Recalculate" /> 🛟 Buffer</label>
+        <input type="number" class="mv-pct-input" @bind="bufferPct" @bind:after="Recalculate" disabled="@(!bufferOn)" min="0" max="100" />
+    </div>
+
+    @if (ShowWants)
+    {
+        <div class="mv-alloc-row @(wantsOn ? "on" : "")">
+            <label><input type="checkbox" @bind="wantsOn" @bind:after="Recalculate" /> 🎉 Unpriced Wants</label>
+            <input type="number" class="mv-pct-input" @bind="wantsPct" @bind:after="Recalculate" disabled="@(!wantsOn)" min="0" max="100" />
+        </div>
+    }
+
+    @if (HasActiveGoal)
+    {
+        <div class="mv-alloc-row @(goalOn ? "on" : "")">
+            <label><input type="checkbox" @bind="goalOn" @bind:after="Recalculate" /> 🎯 @GoalName</label>
+            <input type="number" class="mv-pct-input" @bind="goalPct" @bind:after="Recalculate" disabled="@(!goalOn)" min="0" max="100" />
+        </div>
+    }
+    else
+    {
+        <p class="mv-note">No active goal right now — this can only go to Buffer@(ShowWants ? " or Wants" : "").</p>
+    }
+
+    <p class="mv-alloc-total" style="color:@(IsValid ? "var(--mv-positive)" : "var(--mv-danger)")">
+        Total: @totalPct% @(IsValid ? "✓" : "")
+    </p>
+    @if (!IsValid)
+    {
+        <p class="mv-field__error">Percentages must add up to exactly 100%.</p>
+    }
+
+    <Button Variant="primary" IsDisabled="@(!IsValid)" IsLoading="@IsSubmitting" OnClick="Submit" Label="@ConfirmLabel" />
+</div>
+
+@code {
+    [Parameter] public bool ShowWants { get; set; } = true;
+    [Parameter] public bool HasActiveGoal { get; set; }
+    [Parameter] public string GoalName { get; set; } = "Active Goal";
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirm";
+    [Parameter] public bool IsSubmitting { get; set; }
+    [Parameter] public EventCallback<List<IncomeAllocationSplit>> OnConfirm { get; set; }
+
+    private bool bufferOn = true, wantsOn = true, goalOn = true;
+    private int bufferPct = 50, wantsPct = 30, goalPct = 20;
+    private int totalPct;
+
+    private bool IsValid => totalPct == 100 && (bufferOn || wantsOn || goalOn);
+
+    protected override void OnParametersSet()
+    {
+        if (!ShowWants) wantsOn = false;
+        if (!HasActiveGoal) goalOn = false;
+        Recalculate();
+    }
+
+    private void Recalculate()
+    {
+        totalPct = (bufferOn ? bufferPct : 0) + (wantsOn ? wantsPct : 0) + (goalOn ? goalPct : 0);
+    }
+
+    private async Task Submit()
+    {
+        var splits = new List<IncomeAllocationSplit>();
+        if (bufferOn && bufferPct > 0) splits.Add(new IncomeAllocationSplit("Buffer", bufferPct));
+        if (wantsOn && wantsPct > 0) splits.Add(new IncomeAllocationSplit("Wants", wantsPct));
+        if (goalOn && goalPct > 0) splits.Add(new IncomeAllocationSplit("Goal", goalPct));
+        await OnConfirm.InvokeAsync(splits);
+    }
+}
